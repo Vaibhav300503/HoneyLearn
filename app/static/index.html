@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Defensive AI Honeypot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0f172a',
+                        darker: '#0b1120',
+                        accent: '#38bdf8',
+                        danger: '#f43f5e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0b1120; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; background: rgba(0,0,0,0.2); }
+        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        tr:hover { background: rgba(255,255,255,0.02); }
+        .threat-high { color: #f43f5e; font-weight: bold; }
+        .threat-med { color: #fbbf24; font-weight: bold; }
+        .threat-low { color: #34d399; font-weight: bold; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: bold; }
+        .badge-red { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid #f43f5e; }
+        .badge-green { background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid #34d399; }
+    </style>
+    <!-- Import Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <nav class="glass sticky top-0 z-50 p-4 border-b border-gray-800">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-500">
+                🛡️ AI Honeypot SOC
+            </h1>
+            <button onclick="retrainModel()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all text-sm font-semibold">
+                Retrain AI Model
+            </button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 flex-grow grid gap-6 mt-6">
+        
+        <!-- Stats Row -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="stats-container">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Blocked & Targets -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <div class="glass rounded-xl p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-accent border-b border-gray-700 pb-2">Blocked IPs</h2>
+                    <ul id="blocked-container" class="space-y-3 max-h-64 overflow-y-auto">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <div class="glass rounded-xl p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-accent border-b border-gray-700 pb-2">Top Targets</h2>
+                    <ul id="targets-container" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Live Logs -->
+            <div class="lg:col-span-2 glass rounded-xl p-6 flex flex-col h-[700px]">
+                <h2 class="text-xl font-semibold mb-4 text-accent border-b border-gray-700 pb-2">Recent Malicious Activity</h2>
+                <div class="overflow-x-auto flex-grow" style="max-height: 600px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>IP Address</th>
+                                <th>Method/Path</th>
+                                <th>Payload</th>
+                                <th>Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="glass border-t border-gray-800 p-4 mt-8 text-center text-sm text-gray-500">
+        Defensive Web Honeypot &copy; 2026. Do not expose admin dashboard to internet directly.
+    </footer>
+
+    <script src="/dashboard/app.js"></script>
+</body>
+</html>
