@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL Database ──
+  db:
+    image: postgres:16-alpine
+    container_name: honeypot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: honeypot
+      POSTGRES_USER: honeypot
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-honeypot_secure_2026}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U honeypot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Honeypot Application ──
+  app:
+    build: .
+    container_name: honeypot-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://honeypot:${DB_PASSWORD:-honeypot_secure_2026}@db:5432/honeypot
+      THREAT_BLOCK_THRESHOLD: ${THREAT_BLOCK_THRESHOLD:-85}
+      ALERT_THRESHOLD: ${ALERT_THRESHOLD:-80}
+      SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-30}
+      WHITELIST_IPS: ${WHITELIST_IPS:-127.0.0.1,localhost,::1}
+      # Optional: Cloudflare Integration
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}
+      # Optional: Telegram Alerts
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      # Optional: Email Alerts
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      # Optional: Discord Alerts
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app/ml:/app/app/ml  # Persist trained models
+
+volumes:
+  pgdata:
+    driver: local

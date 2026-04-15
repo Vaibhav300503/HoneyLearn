@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Defensive AI Honeypot</title>
+    <title>Honeypot v2 — SOC Threat Detection Platform</title>
+    <meta name="description" content="AI-powered honeypot with threat detection, MITRE ATT&CK mapping, and SOC analytics">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -12,102 +14,412 @@
                 extend: {
                     colors: {
                         dark: '#0f172a',
-                        darker: '#0b1120',
+                        darker: '#060b18',
+                        surface: '#111827',
+                        surfaceLight: '#1e293b',
                         accent: '#38bdf8',
-                        danger: '#f43f5e'
+                        accentPurple: '#a78bfa',
+                        accentGreen: '#34d399',
+                        danger: '#f43f5e',
+                        dangerBg: 'rgba(244,63,94,0.1)',
+                        warning: '#fbbf24',
+                        warningBg: 'rgba(251,191,36,0.1)',
                     }
                 }
             }
         }
     </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0b1120; color: #f8fafc; font-family: 'Inter', sans-serif; }
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #060b18;
+            color: #e2e8f0;
+            font-family: 'Inter', -apple-system, sans-serif;
         }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .glass-hover:hover {
+            background: rgba(30, 41, 59, 0.85);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        /* Gradient accents */
+        .gradient-accent { background: linear-gradient(135deg, #38bdf8, #a78bfa); }
+        .gradient-danger { background: linear-gradient(135deg, #f43f5e, #fb923c); }
+        .gradient-green { background: linear-gradient(135deg, #34d399, #38bdf8); }
+        .text-gradient {
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Nav tabs */
+        .nav-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+        .nav-tab:hover { background: rgba(56, 189, 248, 0.1); color: #e2e8f0; }
+        .nav-tab.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        /* Stat cards */
+        .stat-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            border-color: rgba(56, 189, 248, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(56, 189, 248, 0.1);
+        }
+
+        /* Tables */
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px; background: rgba(0,0,0,0.2); }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        tr:hover { background: rgba(255,255,255,0.02); }
-        .threat-high { color: #f43f5e; font-weight: bold; }
-        .threat-med { color: #fbbf24; font-weight: bold; }
-        .threat-low { color: #34d399; font-weight: bold; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: bold; }
-        .badge-red { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid #f43f5e; }
-        .badge-green { background: rgba(52, 211, 153, 0.2); color: #34d399; border: 1px solid #34d399; }
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.85rem;
+        }
+        tr:hover td { background: rgba(56, 189, 248, 0.03); }
+
+        /* Badges */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .badge-critical { background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.3); }
+        .badge-high { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+        .badge-medium { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+        .badge-low { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+        .badge-purple { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+
+        /* Timeline */
+        .timeline-node {
+            position: relative;
+            padding-left: 28px;
+            padding-bottom: 16px;
+        }
+        .timeline-node::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            bottom: 0;
+            width: 2px;
+            background: rgba(56, 189, 248, 0.2);
+        }
+        .timeline-node:last-child::before { display: none; }
+        .timeline-node::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid #060b18;
+        }
+        .timeline-node.danger::after { background: #f43f5e; }
+
+        /* Buttons */
+        .btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-danger { background: rgba(244,63,94,0.2); color: #fb7185; border: 1px solid rgba(244,63,94,0.3); }
+        .btn-danger:hover { background: rgba(244,63,94,0.3); }
+        .btn-primary { background: rgba(56,189,248,0.2); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+        .btn-primary:hover { background: rgba(56,189,248,0.3); }
+        .btn-green { background: rgba(52,211,153,0.2); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+        .btn-green:hover { background: rgba(52,211,153,0.3); }
+        .btn-purple { background: rgba(167,139,250,0.2); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+        .btn-purple:hover { background: rgba(167,139,250,0.3); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        /* Pulse animation for active indicator */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .pulse-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            animation: pulse-ring 1.5s ease-out infinite;
+        }
+
+        /* Page sections */
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+
+        /* MITRE grid */
+        .mitre-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+        .mitre-card:hover {
+            border-color: rgba(167, 139, 250, 0.3);
+            box-shadow: 0 4px 16px rgba(167, 139, 250, 0.1);
+        }
     </style>
-    <!-- Import Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="antialiased min-h-screen flex flex-col">
 
-    <nav class="glass sticky top-0 z-50 p-4 border-b border-gray-800">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-500">
-                🛡️ AI Honeypot SOC
-            </h1>
-            <button onclick="retrainModel()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all text-sm font-semibold">
-                Retrain AI Model
-            </button>
+    <!-- ═══════════ NAVBAR ═══════════ -->
+    <nav class="glass sticky top-0 z-50 border-b border-gray-800/50">
+        <div class="max-w-[1600px] mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl gradient-accent flex items-center justify-center text-lg">🛡️</div>
+                    <h1 class="text-lg font-bold text-gradient">Honeypot v2 SOC</h1>
+                    <span class="badge badge-low ml-2 relative">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                        ACTIVE
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 overflow-x-auto" id="nav-tabs">
+                    <button class="nav-tab active" data-tab="overview" id="tab-overview">📊 Overview</button>
+                    <button class="nav-tab" data-tab="sessions" id="tab-sessions">👁️ Sessions</button>
+                    <button class="nav-tab" data-tab="replay" id="tab-replay">🕐 Replay</button>
+                    <button class="nav-tab" data-tab="attacks" id="tab-attacks">⚔️ Attacks</button>
+                    <button class="nav-tab" data-tab="mitre" id="tab-mitre">🗺️ MITRE</button>
+                    <button class="nav-tab" data-tab="blocked" id="tab-blocked">🚫 Blocked</button>
+                    <button class="nav-tab" data-tab="honeytokens" id="tab-honeytokens">🍯 Tokens</button>
+                    <button class="nav-tab" data-tab="export" id="tab-export">📤 Export</button>
+                </div>
+            </div>
         </div>
     </nav>
 
-    <main class="container mx-auto p-4 flex-grow grid gap-6 mt-6">
-        
-        <!-- Stats Row -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="stats-container">
-            <!-- Populated by JS -->
-        </div>
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main class="max-w-[1600px] mx-auto px-4 py-6 flex-grow w-full">
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Left Column: Blocked & Targets -->
-            <div class="lg:col-span-1 space-y-6">
-                
-                <div class="glass rounded-xl p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-accent border-b border-gray-700 pb-2">Blocked IPs</h2>
-                    <ul id="blocked-container" class="space-y-3 max-h-64 overflow-y-auto">
-                        <!-- Populated by JS -->
-                    </ul>
+        <!-- ═══ TAB: OVERVIEW ═══ -->
+        <section class="page-section active" id="page-overview">
+            <!-- Stats Row -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6" id="stats-container"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Charts -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="glass rounded-2xl p-6">
+                        <h2 class="text-base font-semibold text-gray-300 mb-4">Attack Type Distribution</h2>
+                        <div style="height:280px; position:relative;">
+                            <canvas id="attackChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Recent Logs -->
+                    <div class="glass rounded-2xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-base font-semibold text-gray-300">Recent Activity</h2>
+                            <button onclick="retrainModel()" class="btn btn-purple">🧠 Retrain AI</button>
+                        </div>
+                        <div class="overflow-x-auto" style="max-height: 400px; overflow-y: auto;">
+                            <table>
+                                <thead><tr>
+                                    <th>Time</th><th>IP</th><th>Method/Path</th>
+                                    <th>Attack</th><th>Score</th><th>Actions</th>
+                                </tr></thead>
+                                <tbody id="logs-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="glass rounded-xl p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-accent border-b border-gray-700 pb-2">Top Targets</h2>
-                    <ul id="targets-container" class="space-y-3">
-                        <!-- Populated by JS -->
-                    </ul>
+                <!-- Sidebar -->
+                <div class="space-y-6">
+                    <div class="glass rounded-2xl p-6">
+                        <h2 class="text-base font-semibold text-gray-300 mb-4">Top Targeted Paths</h2>
+                        <div id="targets-container" class="space-y-2"></div>
+                    </div>
+                    <div class="glass rounded-2xl p-6">
+                        <h2 class="text-base font-semibold text-gray-300 mb-4">Top Attacker IPs</h2>
+                        <div id="top-ips-container" class="space-y-2"></div>
+                    </div>
                 </div>
-
             </div>
+        </section>
 
-            <!-- Right Column: Live Logs -->
-            <div class="lg:col-span-2 glass rounded-xl p-6 flex flex-col h-[700px]">
-                <h2 class="text-xl font-semibold mb-4 text-accent border-b border-gray-700 pb-2">Recent Malicious Activity</h2>
-                <div class="overflow-x-auto flex-grow" style="max-height: 600px; overflow-y: auto;">
+        <!-- ═══ TAB: SESSIONS ═══ -->
+        <section class="page-section" id="page-sessions">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gradient">Live Attacker Sessions</h2>
+                <div class="flex gap-2">
+                    <button onclick="loadSessions('active')" class="btn btn-primary">🟢 Active Only</button>
+                    <button onclick="loadSessions('all')" class="btn btn-primary">📋 All Sessions</button>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6">
+                <div class="overflow-x-auto">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>IP Address</th>
-                                <th>Method/Path</th>
-                                <th>Payload</th>
-                                <th>Score</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logs-body">
-                            <!-- Populated by JS -->
-                        </tbody>
+                        <thead><tr>
+                            <th>Session ID</th><th>Fingerprint</th><th>Started</th>
+                            <th>Requests</th><th>Max Score</th><th>Attacks</th>
+                            <th>MITRE</th><th>Status</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody id="sessions-body"></tbody>
                     </table>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- ═══ TAB: REPLAY ═══ -->
+        <section class="page-section" id="page-replay">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gradient">Session Replay Timeline</h2>
+                <div class="flex gap-2 items-center">
+                    <label class="text-sm text-gray-400">Session:</label>
+                    <select id="replay-session-select" class="bg-surface border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" onchange="loadReplay(this.value)">
+                        <option value="">Select a session...</option>
+                    </select>
+                </div>
+            </div>
+            <div id="replay-container" class="glass rounded-2xl p-6">
+                <p class="text-gray-500 italic text-center py-8">Select a session above to view its replay timeline.</p>
+            </div>
+        </section>
+
+        <!-- ═══ TAB: ATTACKS ═══ -->
+        <section class="page-section" id="page-attacks">
+            <h2 class="text-xl font-bold text-gradient mb-6">Attack Classification Analytics</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-base font-semibold text-gray-300 mb-4">Attack Type Breakdown</h3>
+                    <div style="height:300px; position:relative;">
+                        <canvas id="attackPieChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-base font-semibold text-gray-300 mb-4">Classification Details</h3>
+                    <div class="overflow-x-auto">
+                        <table>
+                            <thead><tr><th>Attack Type</th><th>Count</th><th>Avg Confidence</th></tr></thead>
+                            <tbody id="attack-types-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ TAB: MITRE ATT&CK ═══ -->
+        <section class="page-section" id="page-mitre">
+            <h2 class="text-xl font-bold text-gradient mb-6">MITRE ATT&CK Mapping</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="mitre-container"></div>
+        </section>
+
+        <!-- ═══ TAB: BLOCKED ═══ -->
+        <section class="page-section" id="page-blocked">
+            <h2 class="text-xl font-bold text-gradient mb-6">Blocked IP Management</h2>
+            <div class="glass rounded-2xl p-6">
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead><tr><th>IP Address</th><th>Reason</th><th>Blocked At</th><th>Actions</th></tr></thead>
+                        <tbody id="blocked-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ TAB: HONEYTOKENS ═══ -->
+        <section class="page-section" id="page-honeytokens">
+            <h2 class="text-xl font-bold text-gradient mb-6">Honeytoken Trap Tokens</h2>
+            <div class="glass rounded-2xl p-6">
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead><tr>
+                            <th>Type</th><th>Token (partial)</th><th>Session</th>
+                            <th>Created</th><th>Status</th><th>Triggered By</th>
+                        </tr></thead>
+                        <tbody id="honeytokens-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ TAB: EXPORT ═══ -->
+        <section class="page-section" id="page-export">
+            <h2 class="text-xl font-bold text-gradient mb-6">Threat Intelligence Export & Reports</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="glass rounded-2xl p-8 text-center glass-hover cursor-pointer" onclick="downloadExport('json')">
+                    <div class="text-4xl mb-3">📋</div>
+                    <h3 class="text-lg font-bold text-gray-200 mb-2">JSON Export</h3>
+                    <p class="text-sm text-gray-400">Full threat intelligence in JSON format</p>
+                    <button class="btn btn-primary mt-4">Download JSON</button>
+                </div>
+                <div class="glass rounded-2xl p-8 text-center glass-hover cursor-pointer" onclick="downloadExport('csv')">
+                    <div class="text-4xl mb-3">📊</div>
+                    <h3 class="text-lg font-bold text-gray-200 mb-2">CSV Export</h3>
+                    <p class="text-sm text-gray-400">Spreadsheet-friendly CSV format</p>
+                    <button class="btn btn-green mt-4">Download CSV</button>
+                </div>
+                <div class="glass rounded-2xl p-8 text-center glass-hover cursor-pointer" onclick="downloadExport('stix')">
+                    <div class="text-4xl mb-3">🔐</div>
+                    <h3 class="text-lg font-bold text-gray-200 mb-2">STIX 2.1 Export</h3>
+                    <p class="text-sm text-gray-400">Standard threat intelligence format</p>
+                    <button class="btn btn-purple mt-4">Download STIX</button>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-base font-semibold text-gray-300 mb-4">Recent Alerts</h3>
+                <table>
+                    <thead><tr><th>Time</th><th>Type</th><th>Reason</th><th>Session</th><th>Status</th></tr></thead>
+                    <tbody id="alerts-body"></tbody>
+                </table>
+            </div>
+        </section>
 
     </main>
 
-    <footer class="glass border-t border-gray-800 p-4 mt-8 text-center text-sm text-gray-500">
-        Defensive Web Honeypot &copy; 2026. Do not expose admin dashboard to internet directly.
+    <!-- Footer -->
+    <footer class="glass border-t border-gray-800/50 p-4 text-center text-xs text-gray-600">
+        Honeypot v2 SOC Platform &copy; 2026 &mdash; Do not expose this dashboard to the public internet.
     </footer>
 
     <script src="/dashboard/app.js"></script>
