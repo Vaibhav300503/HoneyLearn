@@ -1,6 +1,7 @@
 /**
  * Honeypot v2 — Dashboard Application Logic
  * Handles tab navigation, data fetching, charts, and all UI interactions.
+ * Redesigned for the warm card-based Crextio-style dashboard.
  */
 
 // ═══════════════════════════════════════════════
@@ -43,6 +44,7 @@ function loadTabData(tab) {
         case 'export': loadAlerts(); break;
     }
 }
+
 
 // ═══════════════════════════════════════════════
 // UTILITIES
@@ -88,7 +90,7 @@ function threatBadge(level) {
 }
 
 function attackBadge(type) {
-    if (!type) return '<span class="text-gray-500 text-xs">benign</span>';
+    if (!type) return '<span style="color:var(--text-muted);font-size:0.72rem;">benign</span>';
     const colors = {
         'sql_injection': 'badge-critical',
         'xss': 'badge-high',
@@ -106,6 +108,50 @@ function truncate(str, len) {
     return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
+function getScoreClass(score) {
+    if (score > 70) return 'high';
+    if (score > 40) return 'medium';
+    return 'low';
+}
+
+function getThreatIcon(type) {
+    const icons = {
+        'sql_injection': '💉',
+        'xss': '⚡',
+        'rce_attempt': '💀',
+        'brute_force': '🔨',
+        'directory_traversal': '📁',
+        'bot_scanner': '🤖',
+        'credential_stuffing': '🔑',
+    };
+    return icons[type] || '⚠️';
+}
+
+function getThreatSeverity(score) {
+    if (score > 80) return 'critical';
+    if (score > 60) return 'high';
+    if (score > 40) return 'medium';
+    return 'low';
+}
+
+
+// ═══════════════════════════════════════════════
+// COLLAPSIBLE SECTIONS
+// ═══════════════════════════════════════════════
+
+function toggleSection(name) {
+    const section = document.getElementById(`section-${name}`);
+    if (!section) return;
+    const content = section.querySelector('.section-content');
+    const chevron = section.querySelector('.chevron');
+    if (content) {
+        content.classList.toggle('collapsed');
+    }
+    if (chevron) {
+        chevron.classList.toggle('up');
+    }
+}
+
 
 // ═══════════════════════════════════════════════
 // OVERVIEW TAB
@@ -116,59 +162,132 @@ async function fetchStats() {
         const res = await fetch('/api/admin/stats');
         const d = await res.json();
 
-        document.getElementById('stats-container').innerHTML = `
-            <div class="stat-card text-center">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Requests</div>
-                <div class="text-2xl font-bold text-accent">${d.total_attacks || 0}</div>
-            </div>
-            <div class="stat-card text-center">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Blocked IPs</div>
-                <div class="text-2xl font-bold text-rose-400">${d.blocked_count || 0}</div>
-            </div>
-            <div class="stat-card text-center">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Active Sessions</div>
-                <div class="text-2xl font-bold text-green-400">${d.active_sessions || 0}</div>
-            </div>
-            <div class="stat-card text-center">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Fingerprints</div>
-                <div class="text-2xl font-bold text-purple-400">${d.unique_fingerprints || 0}</div>
-            </div>
-            <div class="stat-card text-center">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Avg Score</div>
-                <div class="text-2xl font-bold ${d.average_threat_score > 50 ? 'text-rose-400' : 'text-green-400'}">${(d.average_threat_score || 0).toFixed(1)}</div>
-            </div>
-            <div class="stat-card text-center">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Tokens Triggered</div>
-                <div class="text-2xl font-bold ${d.honeytokens_triggered > 0 ? 'text-rose-400' : 'text-gray-400'}">${d.honeytokens_triggered || 0}</div>
-            </div>
-        `;
+        // Counter numbers with animation
+        animateCounter('stat-total', d.total_attacks || 0);
+        animateCounter('stat-blocked', d.blocked_count || 0);
+        animateCounter('stat-sessions', d.active_sessions || 0);
 
-        // Top paths
-        const tc = document.getElementById('targets-container');
-        tc.innerHTML = '';
-        (d.top_paths || []).forEach(p => {
-            tc.innerHTML += `
-                <div class="flex justify-between items-center p-2 rounded-lg hover:bg-white/5 transition-colors">
-                    <span class="font-mono text-xs text-gray-300 truncate max-w-[180px]">${escapeHTML(p.path)}</span>
-                    <span class="badge badge-critical">${p.count}</span>
-                </div>`;
-        });
+        // Profile section values
+        document.getElementById('stat-fingerprints').textContent = d.unique_fingerprints || 0;
+        document.getElementById('stat-tokens').textContent = d.honeytokens_triggered || 0;
+
+        // Quick stats
+        document.getElementById('qs-blocked').textContent = d.blocked_count || 0;
+        const avgScore = d.average_threat_score || 0;
+        if (avgScore > 70) {
+            document.getElementById('qs-threat-level').textContent = 'CRITICAL';
+            document.getElementById('qs-threat-level').className = 'quick-stat-pill pill-danger';
+        } else if (avgScore > 40) {
+            document.getElementById('qs-threat-level').textContent = 'HIGH';
+            document.getElementById('qs-threat-level').className = 'quick-stat-pill pill-warning';
+        } else {
+            document.getElementById('qs-threat-level').textContent = 'LOW';
+            document.getElementById('qs-threat-level').className = 'quick-stat-pill pill-success';
+        }
+
+        // Avg Score Badge
+        const avgEl = document.getElementById('avg-score-value');
+        avgEl.textContent = avgScore.toFixed(1);
+
+        // Gauge
+        updateGauge(avgScore);
+
+        // Tracker stats
+        document.getElementById('tracker-active').textContent = d.active_sessions || 0;
+        document.getElementById('tracker-anomalies').textContent = d.total_attacks || 0;
 
         // Top IPs
         const ic = document.getElementById('top-ips-container');
         ic.innerHTML = '';
         (d.top_ips || []).forEach(ip => {
             ic.innerHTML += `
-                <div class="flex justify-between items-center p-2 rounded-lg hover:bg-white/5 transition-colors">
-                    <span class="font-mono text-xs text-gray-300">${escapeHTML(ip.ip)}</span>
-                    <span class="badge badge-high">${ip.count}</span>
+                <div class="ip-item">
+                    <span class="ip-text">${escapeHTML(ip.ip)}</span>
+                    <span class="ip-count">${ip.count}</span>
+                </div>`;
+        });
+
+        // Top paths
+        const tc = document.getElementById('targets-container');
+        tc.innerHTML = '';
+        (d.top_paths || []).forEach(p => {
+            tc.innerHTML += `
+                <div class="path-item">
+                    <span class="path-text">${escapeHTML(p.path)}</span>
+                    <span class="path-count">${p.count}</span>
                 </div>`;
         });
 
         // Attack chart
         renderAttackChart(d.attack_distribution || []);
 
+        // Detection bars
+        renderDetectionBars(d.attack_distribution || [], d.total_attacks || 0);
+
     } catch (e) { console.error('Stats fetch error:', e); }
+}
+
+function animateCounter(elementId, target) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const start = parseInt(el.textContent) || 0;
+    const duration = 800;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (target - start) * eased);
+        el.textContent = current;
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+
+function updateGauge(score) {
+    const fill = document.getElementById('gauge-fill');
+    const value = document.getElementById('gauge-value');
+    if (!fill || !value) return;
+
+    const circumference = 2 * Math.PI * 52; // r=52
+    const offset = circumference - (score / 100) * circumference;
+    fill.style.strokeDashoffset = offset;
+
+    // Color based on score
+    fill.classList.remove('high', 'medium', 'low');
+    fill.classList.add(getScoreClass(score));
+
+    value.textContent = score.toFixed(1);
+}
+
+function renderDetectionBars(distribution, total) {
+    const container = document.getElementById('detection-bars');
+    if (!container) return;
+
+    if (!distribution.length || total === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);font-size:0.78rem;padding:8px 0;">No attack data available yet.</p>';
+        document.getElementById('detection-pct').textContent = '0%';
+        return;
+    }
+
+    const attackTotal = distribution.reduce((sum, d) => sum + d.count, 0);
+    const pct = total > 0 ? ((attackTotal / total) * 100).toFixed(0) : 0;
+    document.getElementById('detection-pct').textContent = `${pct}%`;
+
+    const colors = ['accent', 'info', 'dark', 'muted'];
+    container.innerHTML = '';
+    distribution.slice(0, 4).forEach((d, i) => {
+        const barPct = total > 0 ? ((d.count / total) * 100).toFixed(0) : 0;
+        container.innerHTML += `
+            <div class="detection-bar-item">
+                <span class="det-bar-label">${barPct}%</span>
+                <div class="det-bar-track">
+                    <div class="det-bar-fill ${colors[i % colors.length]}" style="width:${barPct}%"></div>
+                </div>
+                <span class="det-bar-pct" style="font-size:0.68rem;color:var(--text-muted);">${(d.type || '').replace(/_/g, ' ')}</span>
+            </div>`;
+    });
 }
 
 function renderAttackChart(data) {
@@ -178,9 +297,13 @@ function renderAttackChart(data) {
     if (chartInstances.attackChart) chartInstances.attackChart.destroy();
 
     const colors = {
-        'sql_injection': '#f43f5e', 'xss': '#fb923c', 'brute_force': '#fbbf24',
-        'directory_traversal': '#38bdf8', 'rce_attempt': '#ef4444', 'bot_scanner': '#a78bfa',
-        'credential_stuffing': '#f97316'
+        'sql_injection': '#e74c3c',
+        'xss': '#f39c12',
+        'brute_force': '#d4a843',
+        'directory_traversal': '#3498db',
+        'rce_attempt': '#c0392b',
+        'bot_scanner': '#8e44ad',
+        'credential_stuffing': '#e67e22'
     };
 
     chartInstances.attackChart = new Chart(ctx, {
@@ -189,17 +312,39 @@ function renderAttackChart(data) {
             labels: data.map(d => (d.type || '').replace(/_/g, ' ')),
             datasets: [{
                 data: data.map(d => d.count),
-                backgroundColor: data.map(d => colors[d.type] || '#64748b'),
-                borderRadius: 8,
+                backgroundColor: data.map(d => colors[d.type] || '#9e9690'),
+                borderRadius: 10,
                 borderSkipped: false,
+                barThickness: 32,
             }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#2a2a2a',
+                    titleColor: '#f0ece6',
+                    bodyColor: '#a09890',
+                    borderColor: 'rgba(212,168,67,0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 10,
+                    padding: 12,
+                    titleFont: { weight: '700' },
+                }
+            },
             scales: {
-                x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } },
-                y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b' } }
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#9e9690', font: { size: 11, weight: '500' } },
+                    border: { display: false }
+                },
+                y: {
+                    grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                    ticks: { color: '#9e9690', font: { size: 11 } },
+                    border: { display: false }
+                }
             }
         }
     });
@@ -212,23 +357,57 @@ async function fetchLogs() {
         const tbody = document.getElementById('logs-body');
         tbody.innerHTML = '';
 
+        // Populate threat list (recent threats in the dark card)
+        populateThreatList(logs);
+
         logs.forEach(log => {
             tbody.innerHTML += `
                 <tr>
-                    <td class="text-xs text-gray-500">${formatTime(log.timestamp)}</td>
-                    <td class="font-mono text-xs">${escapeHTML(log.ip_address)}</td>
-                    <td class="text-xs">
-                        <span class="font-semibold text-gray-200">${log.method}</span>
-                        <span class="font-mono text-gray-400 ml-1">${escapeHTML(truncate(log.path, 30))}</span>
+                    <td style="font-size:0.75rem;color:var(--text-muted);">${formatTime(log.timestamp)}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${escapeHTML(log.ip_address)}</td>
+                    <td>
+                        <span style="font-weight:600;color:var(--text-primary);">${log.method}</span>
+                        <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);margin-left:4px;font-size:0.78rem;">${escapeHTML(truncate(log.path, 30))}</span>
                     </td>
                     <td>${attackBadge(log.attack_type)}</td>
                     <td>${scoreBadge(log.threat_score)}</td>
                     <td>
-                        <button onclick="blockIP('${escapeHTML(log.ip_address)}')" class="btn btn-danger text-xs">Block</button>
+                        <button onclick="blockIP('${escapeHTML(log.ip_address)}')" class="btn btn-danger" style="font-size:0.72rem;padding:4px 12px;">Block</button>
                     </td>
                 </tr>`;
         });
     } catch (e) { console.error('Logs fetch error:', e); }
+}
+
+function populateThreatList(logs) {
+    const list = document.getElementById('threat-list');
+    const countEl = document.getElementById('threat-count');
+    const totalEl = document.getElementById('threat-total');
+    if (!list) return;
+
+    const threats = logs.filter(l => l.attack_type && l.attack_type !== 'benign').slice(0, 8);
+    countEl.textContent = threats.length;
+    totalEl.textContent = logs.length;
+
+    if (threats.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-on-dark-muted);font-size:0.78rem;text-align:center;padding:24px 0;">No threats detected yet.</p>';
+        return;
+    }
+
+    list.innerHTML = '';
+    threats.forEach(t => {
+        const severity = getThreatSeverity(t.threat_score);
+        const statusClass = t.threat_score > 80 ? 'blocked' : (t.threat_score > 50 ? 'watching' : 'active');
+        list.innerHTML += `
+            <div class="threat-item">
+                <div class="threat-type-icon ${severity}">${getThreatIcon(t.attack_type)}</div>
+                <div class="threat-details">
+                    <div class="threat-name">${(t.attack_type || '').replace(/_/g, ' ')}</div>
+                    <div class="threat-meta">${escapeHTML(t.ip_address)} · ${formatShort(t.timestamp)}</div>
+                </div>
+                <div class="threat-status-dot ${statusClass}" title="Score: ${t.threat_score.toFixed(0)}"></div>
+            </div>`;
+    });
 }
 
 
@@ -245,7 +424,7 @@ async function loadSessions(mode) {
         tbody.innerHTML = '';
 
         if (!sessions.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-gray-500 py-8">No sessions found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No sessions found</td></tr>';
             return;
         }
 
@@ -257,19 +436,19 @@ async function loadSessions(mode) {
 
             tbody.innerHTML += `
                 <tr>
-                    <td class="font-mono text-xs">${s.id.substring(0, 8)}...</td>
-                    <td class="font-mono text-xs">${(s.fingerprint_id || '').substring(0, 12)}...</td>
-                    <td class="text-xs text-gray-400">${formatTime(s.started_at)}</td>
-                    <td class="text-sm font-semibold">${s.total_requests}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${s.id.substring(0, 8)}...</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${(s.fingerprint_id || '').substring(0, 12)}...</td>
+                    <td style="font-size:0.75rem;color:var(--text-muted);">${formatTime(s.started_at)}</td>
+                    <td style="font-weight:700;">${s.total_requests}</td>
                     <td>${scoreBadge(s.max_threat_score)}</td>
-                    <td>${attacks || '<span class="text-gray-600 text-xs">-</span>'}</td>
-                    <td>${mitre || '<span class="text-gray-600 text-xs">-</span>'}</td>
+                    <td>${attacks || '<span style="color:var(--text-muted);font-size:0.72rem;">-</span>'}</td>
+                    <td>${mitre || '<span style="color:var(--text-muted);font-size:0.72rem;">-</span>'}</td>
                     <td>${s.is_active
-                        ? '<span class="badge badge-low"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Active</span>'
-                        : '<span class="text-gray-600 text-xs">Closed</span>'}</td>
+                        ? '<span class="badge badge-low"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#27ae60;margin-right:4px;"></span> Active</span>'
+                        : '<span style="color:var(--text-muted);font-size:0.72rem;">Closed</span>'}</td>
                     <td>
-                        <button onclick="viewReplay('${s.id}')" class="btn btn-primary text-xs">📂 Replay</button>
-                        <button onclick="viewIncident('${s.id}')" class="btn btn-purple text-xs ml-1">📄 Report</button>
+                        <button onclick="viewReplay('${s.id}')" class="btn btn-outline" style="font-size:0.72rem;padding:4px 10px;">📂 Replay</button>
+                        <button onclick="viewIncident('${s.id}')" class="btn btn-purple" style="font-size:0.72rem;padding:4px 10px;margin-left:4px;">📄 Report</button>
                     </td>
                 </tr>`;
         });
@@ -297,44 +476,44 @@ async function loadSessionList() {
 async function loadReplay(sessionId) {
     if (!sessionId) return;
     const container = document.getElementById('replay-container');
-    container.innerHTML = '<p class="text-gray-400 text-center py-4">Loading timeline...</p>';
+    container.innerHTML = '<p class="empty-state">Loading timeline...</p>';
 
     try {
         const res = await fetch(`/api/admin/sessions/${sessionId}/timeline`);
         const events = await res.json();
 
         if (!events.length) {
-            container.innerHTML = '<p class="text-gray-500 italic text-center py-8">No events found for this session.</p>';
+            container.innerHTML = '<p class="empty-state">No events found for this session.</p>';
             return;
         }
 
         // Path flow visualization
-        let pathFlow = events.map(e => `<span class="font-mono text-xs px-2 py-1 rounded bg-surface">${e.method} ${e.path}</span>`).join(' <span class="text-accent">→</span> ');
+        let pathFlow = events.map(e => `<span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;padding:4px 10px;background:var(--bg-input);border-radius:var(--radius-sm);display:inline-block;">${e.method} ${e.path}</span>`).join(' <span style="color:var(--accent);font-weight:700;">→</span> ');
 
         let html = `
-            <div class="mb-6 p-4 rounded-xl bg-surface/50">
-                <h3 class="text-sm font-semibold text-gray-400 mb-2">Attack Path</h3>
-                <div class="flex flex-wrap items-center gap-1">${pathFlow}</div>
+            <div style="margin-bottom:24px;padding:16px;border-radius:var(--radius-md);background:var(--bg-input);">
+                <h3 style="font-size:0.82rem;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Attack Path</h3>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">${pathFlow}</div>
             </div>
-            <div class="space-y-0">`;
+            <div>`;
 
         events.forEach((e, i) => {
             const isDanger = e.threat_score > 60;
             html += `
                 <div class="timeline-node ${isDanger ? 'danger' : ''}">
-                    <div class="flex items-start justify-between">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;">
                         <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-sm font-semibold text-gray-200">${e.method} <span class="font-mono text-accent">${escapeHTML(e.path)}</span></span>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                                <span style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">${e.method} <span style="font-family:'JetBrains Mono',monospace;color:var(--accent-dark);">${escapeHTML(e.path)}</span></span>
                                 ${e.attack_type ? attackBadge(e.attack_type) : ''}
                                 ${scoreBadge(e.threat_score)}
                             </div>
-                            ${e.payload_snippet ? `<div class="font-mono text-xs text-rose-300/70 mt-1 max-w-2xl truncate">${escapeHTML(e.payload_snippet)}</div>` : ''}
+                            ${e.payload_snippet ? `<div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--danger);margin-top:4px;max-width:600px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(e.payload_snippet)}</div>` : ''}
                         </div>
-                        <div class="text-right text-xs text-gray-500 whitespace-nowrap">
+                        <div style="text-align:right;font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">
                             <div>${formatShort(e.timestamp)}</div>
-                            ${e.time_delta_ms > 0 ? `<div class="text-gray-600">+${e.time_delta_ms}ms</div>` : ''}
-                            ${e.response_code ? `<div class="text-gray-600">${e.response_code}</div>` : ''}
+                            ${e.time_delta_ms > 0 ? `<div style="color:var(--text-light);">+${e.time_delta_ms}ms</div>` : ''}
+                            ${e.response_code ? `<div style="color:var(--text-light);">${e.response_code}</div>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -344,7 +523,7 @@ async function loadReplay(sessionId) {
         container.innerHTML = html;
 
     } catch (e) {
-        container.innerHTML = '<p class="text-red-400 text-center py-4">Error loading timeline.</p>';
+        container.innerHTML = '<p class="empty-state" style="color:var(--danger);">Error loading timeline.</p>';
         console.error('Replay error:', e);
     }
 }
@@ -352,7 +531,6 @@ async function loadReplay(sessionId) {
 function viewReplay(sessionId) {
     switchTab('replay');
     const select = document.getElementById('replay-session-select');
-    // Try to set the value
     loadSessionList().then(() => {
         select.value = sessionId;
         loadReplay(sessionId);
@@ -375,8 +553,8 @@ async function loadAttackTypes() {
             tbody.innerHTML += `
                 <tr>
                     <td>${attackBadge(d.attack_type)}</td>
-                    <td class="text-lg font-bold">${d.count}</td>
-                    <td class="text-gray-400">${(d.avg_confidence * 100).toFixed(1)}%</td>
+                    <td style="font-size:1rem;font-weight:700;">${d.count}</td>
+                    <td style="color:var(--text-muted);">${(d.avg_confidence * 100).toFixed(1)}%</td>
                 </tr>`;
         });
 
@@ -390,7 +568,7 @@ function renderAttackPie(data) {
     if (!ctx) return;
     if (chartInstances.attackPie) chartInstances.attackPie.destroy();
 
-    const colors = ['#f43f5e', '#fb923c', '#fbbf24', '#38bdf8', '#a78bfa', '#34d399', '#f97316', '#64748b'];
+    const colors = ['#e74c3c', '#f39c12', '#d4a843', '#3498db', '#8e44ad', '#27ae60', '#e67e22', '#9e9690'];
 
     chartInstances.attackPie = new Chart(ctx, {
         type: 'doughnut',
@@ -400,16 +578,33 @@ function renderAttackPie(data) {
                 data: data.map(d => d.count),
                 backgroundColor: colors.slice(0, data.length),
                 borderWidth: 0,
-                spacing: 2,
+                spacing: 3,
+                borderRadius: 4,
             }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            cutout: '60%',
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: '#94a3b8', padding: 16, font: { size: 11 } }
+                    labels: {
+                        color: '#6b6560',
+                        padding: 16,
+                        font: { size: 11, weight: '500' },
+                        usePointStyle: true,
+                        pointStyleWidth: 8,
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#2a2a2a',
+                    titleColor: '#f0ece6',
+                    bodyColor: '#a09890',
+                    borderColor: 'rgba(212,168,67,0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 10,
+                    padding: 12,
                 }
             }
         }
@@ -429,35 +624,24 @@ async function loadMitre() {
         container.innerHTML = '';
 
         if (!data.length) {
-            container.innerHTML = '<div class="col-span-3 text-center text-gray-500 py-12">No MITRE ATT&CK techniques detected yet. Send some attack traffic to see mappings.</div>';
+            container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:48px 16px;">No MITRE ATT&CK techniques detected yet. Send some attack traffic to see mappings.</div>';
             return;
         }
 
-        const tacticColors = {
-            'Initial Access': 'from-rose-500/20 to-transparent border-rose-500/30',
-            'Credential Access': 'from-amber-500/20 to-transparent border-amber-500/30',
-            'Execution': 'from-red-600/20 to-transparent border-red-600/30',
-            'Discovery': 'from-sky-500/20 to-transparent border-sky-500/30',
-            'Reconnaissance': 'from-violet-500/20 to-transparent border-violet-500/30',
-            'Collection': 'from-emerald-500/20 to-transparent border-emerald-500/30',
-            'Persistence': 'from-orange-500/20 to-transparent border-orange-500/30',
-        };
-
         data.forEach(m => {
-            const gradient = tacticColors[m.tactic] || 'from-gray-500/20 to-transparent border-gray-500/30';
             container.innerHTML += `
-                <div class="mitre-card bg-gradient-to-br ${gradient}">
-                    <div class="flex items-center justify-between mb-2">
+                <div class="mitre-card">
+                    <div class="mitre-card-header">
                         <span class="badge badge-purple">${m.technique_id}</span>
-                        <span class="text-xs text-gray-500">${m.count} occurrence${m.count > 1 ? 's' : ''}</span>
+                        <span style="font-size:0.72rem;color:var(--text-muted);">${m.count} occurrence${m.count > 1 ? 's' : ''}</span>
                     </div>
-                    <h3 class="text-sm font-semibold text-gray-200 mb-1">${escapeHTML(m.technique_name)}</h3>
-                    <div class="text-xs text-gray-400 mb-2">${escapeHTML(m.tactic)}</div>
-                    <div class="flex items-center gap-2">
-                        <div class="flex-grow h-1.5 rounded-full bg-gray-700">
-                            <div class="h-1.5 rounded-full gradient-accent" style="width:${(m.avg_confidence * 100).toFixed(0)}%"></div>
+                    <div class="mitre-technique">${escapeHTML(m.technique_name)}</div>
+                    <div class="mitre-tactic">${escapeHTML(m.tactic)}</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div class="mitre-bar-track" style="flex:1;">
+                            <div class="mitre-bar-fill" style="width:${(m.avg_confidence * 100).toFixed(0)}%"></div>
                         </div>
-                        <span class="text-xs text-gray-400">${(m.avg_confidence * 100).toFixed(0)}%</span>
+                        <span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;">${(m.avg_confidence * 100).toFixed(0)}%</span>
                     </div>
                 </div>`;
         });
@@ -477,18 +661,18 @@ async function fetchBlocked() {
         tbody.innerHTML = '';
 
         if (!blocked.length) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-8">No IPs currently blocked.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No IPs currently blocked.</td></tr>';
             return;
         }
 
         blocked.forEach(b => {
             tbody.innerHTML += `
                 <tr>
-                    <td class="font-mono text-sm text-rose-400">${escapeHTML(b.ip_address)}</td>
-                    <td class="text-xs text-gray-400 max-w-sm truncate">${escapeHTML(b.reason || '')}</td>
-                    <td class="text-xs text-gray-500">${formatTime(b.blocked_at)}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--danger);font-weight:600;">${escapeHTML(b.ip_address)}</td>
+                    <td style="font-size:0.78rem;color:var(--text-muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(b.reason || '')}</td>
+                    <td style="font-size:0.75rem;color:var(--text-muted);">${formatTime(b.blocked_at)}</td>
                     <td>
-                        <button onclick="unblockIP('${escapeHTML(b.ip_address)}')" class="btn btn-green text-xs">Unblock</button>
+                        <button onclick="unblockIP('${escapeHTML(b.ip_address)}')" class="btn btn-success" style="font-size:0.72rem;padding:4px 12px;">Unblock</button>
                     </td>
                 </tr>`;
         });
@@ -508,21 +692,21 @@ async function loadHoneytokens() {
         tbody.innerHTML = '';
 
         if (!tokens.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-8">No honeytokens generated yet. Honeytokens are created when attackers visit honeypot pages.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No honeytokens generated yet. Honeytokens are created when attackers visit honeypot pages.</td></tr>';
             return;
         }
 
         tokens.forEach(t => {
             tbody.innerHTML += `
-                <tr class="${t.triggered ? 'bg-rose-500/5' : ''}">
+                <tr style="${t.triggered ? 'background:var(--danger-light);' : ''}">
                     <td><span class="badge badge-purple">${t.token_type}</span></td>
-                    <td class="font-mono text-xs text-gray-400">${escapeHTML(t.token_value)}</td>
-                    <td class="font-mono text-xs text-gray-500">${t.session_id ? t.session_id.substring(0, 8) + '...' : '-'}</td>
-                    <td class="text-xs text-gray-500">${formatTime(t.created_at)}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-muted);">${escapeHTML(t.token_value)}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-muted);">${t.session_id ? t.session_id.substring(0, 8) + '...' : '-'}</td>
+                    <td style="font-size:0.75rem;color:var(--text-muted);">${formatTime(t.created_at)}</td>
                     <td>${t.triggered
                         ? '<span class="badge badge-critical">🚨 TRIGGERED</span>'
                         : '<span class="badge badge-low">Dormant</span>'}</td>
-                    <td class="font-mono text-xs">${t.triggered_by_ip ? escapeHTML(t.triggered_by_ip) : '-'}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;">${t.triggered_by_ip ? escapeHTML(t.triggered_by_ip) : '-'}</td>
                 </tr>`;
         });
     } catch (e) { console.error('Honeytokens error:', e); }
@@ -545,18 +729,20 @@ async function loadAlerts() {
         tbody.innerHTML = '';
 
         if (!alerts.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-8">No alerts sent yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No alerts sent yet.</td></tr>';
             return;
         }
 
         alerts.forEach(a => {
             tbody.innerHTML += `
                 <tr>
-                    <td class="text-xs text-gray-500">${formatTime(a.sent_at)}</td>
+                    <td style="font-size:0.75rem;color:var(--text-muted);">${formatTime(a.sent_at)}</td>
                     <td><span class="badge badge-medium">${a.alert_type}</span></td>
-                    <td class="text-xs text-gray-300">${escapeHTML(truncate(a.trigger_reason, 50))}</td>
-                    <td class="font-mono text-xs text-gray-500">${a.session_id ? a.session_id.substring(0, 8) + '...' : '-'}</td>
-                    <td>${a.success ? '<span class="text-green-400 text-xs">✓ Sent</span>' : '<span class="text-rose-400 text-xs">✗ Failed</span>'}</td>
+                    <td style="font-size:0.78rem;color:var(--text-secondary);">${escapeHTML(truncate(a.trigger_reason, 50))}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-muted);">${a.session_id ? a.session_id.substring(0, 8) + '...' : '-'}</td>
+                    <td>${a.success
+                        ? '<span style="color:var(--success);font-size:0.78rem;font-weight:600;">✓ Sent</span>'
+                        : '<span style="color:var(--danger);font-size:0.78rem;font-weight:600;">✗ Failed</span>'}</td>
                 </tr>`;
         });
     } catch (e) { console.error('Alerts error:', e); }

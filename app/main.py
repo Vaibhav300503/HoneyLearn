@@ -238,11 +238,6 @@ async def honeypot_middleware(request: Request, call_next):
     finally:
         db.close()
 
-    # Re-inject request body for downstream handlers
-    async def receive():
-        return {"type": "http.request", "body": body_bytes}
-    request._receive = receive
-
     response = await call_next(request)
     return response
 
