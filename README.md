@@ -6,20 +6,21 @@ A production-grade, AI-powered web honeypot platform that tracks attacker sessio
 
 | Feature | Description |
 |---------|-------------|
-| **Attacker Fingerprinting** | Unique ID per visitor using IP + UA + header patterns + optional browser fingerprint |
-| **AI Attack Classification** | TF-IDF + LinearSVC classifies into 7 attack categories with confidence scores |
-| **Session Replay Timeline** | Ordered attacker journey with timestamps, payloads, and time deltas |
-| **MITRE ATT&CK Mapping** | Auto-maps detected attacks to MITRE techniques (T1190, T1110, etc.) |
-| **Honeytokens** | Fake API keys, JWTs, AWS keys embedded in trap pages — triggers HIGH RISK on reuse |
-| **Threat Intelligence Export** | JSON, CSV, and STIX 2.1 export for SOC integration |
-| **Auto Blocking** | Cloudflare API + Nginx deny rules generation |
-| **Alerting** | Telegram, Email (SMTP), and Discord webhook alerts |
-| **Incident Reports** | Markdown incident reports with full attacker analysis |
-| **Premium Dashboard** | 8-tab glassmorphism UI with Chart.js analytics |
+| **Premium Warm Dashboard** | A highly aesthetic, card-based dashboard with a warm cream/amber palette, smooth micro-animations, and dynamic SVG gauges. Pure HTML/CSS/JS (no heavy frontend frameworks). |
+| **Comprehensive Attack Simulator** | A built-in Python script (`tests/attack_simulator.py`) to safely fire realistic payloads (SQLi, XSS, RCE, Brute Force, Scanners, etc.) at your local instance to verify detection and UI updates. |
+| **Attacker Fingerprinting** | Unique ID per visitor using IP + UA + header patterns + optional browser fingerprinting. |
+| **AI Attack Classification** | Uses `scikit-learn` (TF-IDF + LinearSVC/Isolation Forest) to classify incoming traffic into 7 exact attack categories with statistical confidence scores. |
+| **Session Replay Timeline** | Ordered attacker journey tracking with timestamps, payloads, and time deltas. |
+| **MITRE ATT&CK Mapping** | Auto-maps detected attacks to MITRE techniques (T1190, T1110, T1059, etc.). |
+| **Honeytokens (Decoys)** | Fake API keys, JWTs, AWS keys embedded in trap HTML pages — actively triggers HIGH RISK alerts upon reuse. |
+| **Threat Intelligence Export** | JSON, CSV, and STIX 2.1 data export formatting for SOC incident response systems. |
+| **Multi-Tier Auto Blocking** | Local database blocks + Cloudflare API + Nginx deny rules auto-generation. |
+| **Real-time Alerting** | Integrations for Telegram, Email (SMTP), and Discord webhooks. |
+| **Incident Reports** | Markdown incident reports with full attacker analysis generated per session. |
 
-## 🏗️ Architecture
+## 🏗️ Architecture Flow
 
-```
+```text
 Request → [IP Check] → [Fingerprint] → [Session Track] → [Honeytoken Check]
                                                                ↓
                                               [AI Anomaly Score + Attack Classify]
@@ -31,265 +32,155 @@ Request → [IP Check] → [Fingerprint] → [Session Track] → [Honeytoken Che
 
 ## 📂 Project Structure
 
-```
+```text
 HoneyPOt/
 ├── app/
-│   ├── main.py              # FastAPI app with middleware pipeline
-│   ├── config.py             # Centralized environment configuration
-│   ├── database.py           # SQLAlchemy engine + session
-│   ├── models.py             # 9 database tables (logs, fingerprints, sessions, etc.)
-│   ├── blocking.py           # Multi-backend IP blocking (local + Cloudflare + Nginx)
-│   ├── fingerprint.py        # Attacker fingerprinting engine
-│   ├── session_tracker.py    # Session replay timeline builder
-│   ├── honeytokens.py        # Honeytoken generation + validation
-│   ├── mitre.py              # MITRE ATT&CK mapping engine
-│   ├── alerting.py           # Multi-channel alert dispatcher
-│   ├── incident_report.py    # Markdown incident report generator
-│   ├── export.py             # JSON/CSV/STIX 2.1 export
-│   ├── sanitizer.py          # Payload sanitization utilities
-│   ├── cloudflare_blocker.py # Cloudflare API integration
-│   ├── nginx_blocker.py      # Nginx deny rules generator
+│   ├── main.py                # FastAPI app with request-parsing middleware
+│   ├── config.py              # Centralized environment configuration
+│   ├── database.py            # SQLAlchemy engine + SQLite/Postgres session
+│   ├── models.py              # 9 database tables (logs, fingerprints, sessions, etc.)
+│   ├── fingerprint.py         # Attacker fingerprint engine
+│   ├── session_tracker.py     # Session replay timeline builder
+│   ├── honeytokens.py         # Honeytoken decoy generation
+│   ├── mitre.py               # MITRE ATT&CK mapping engine
+│   ├── sanitizer.py           # Payload sanitization and XSS escape utilities
+│   ├── blocking.py            # IP block manager (Local + Next-gen Firewalls)
+│   ├── cloudflare_blocker.py  # Cloudflare integration for hard WAF blocking
+│   ├── nginx_blocker.py       # Nginx deny rules generator
+│   ├── alerting.py            # Telemetry/alert dispatcher (Discord, Email, TG)
+│   ├── incident_report.py     # Markdown incident report generator
+│   ├── export.py              # STIX 2.1 / JSON / CSV Exports
 │   ├── ml/
-│   │   ├── anomaly_detector.py    # IsolationForest threat scoring
-│   │   ├── train.py               # Anomaly model training
-│   │   ├── attack_classifier.py   # TF-IDF + LinearSVC classifier
-│   │   ├── classifier_train.py    # Classifier training with synthetic data
-│   │   └── feature_extractor.py   # Shared pattern detection library
+│   │   ├── anomaly_detector.py    # IsolationForest threat scoring module
+│   │   ├── train.py               # Anomaly model continuous training
+│   │   ├── attack_classifier.py   # TF-IDF + LinearSVC ML classifier
+│   │   ├── classifier_train.py    # Retraining scripts over synthetic datasets
+│   │   └── feature_extractor.py   # Token extraction heuristics
 │   └── static/
-│       ├── index.html         # Dashboard (8-tab SPA)
-│       ├── app.js             # Dashboard logic + charts
-│       └── fingerprint.js     # Browser-side fingerprinting
+│       ├── index.html         # Aesthetically premium 8-tab SPA dashboard
+│       ├── styles.css         # Warm card-based UI Design System (No Tailwind)
+│       ├── app.js             # Client logic (animations, charts, API fetches)
+│       └── fingerprint.js     # Browser-level fingerprinting JS logic
 ├── tests/
-│   └── test_honeypot.py       # Test suite
-├── Dockerfile                 # Production container
-├── docker-compose.yml         # PostgreSQL + App stack
-├── .env.example               # Environment variable template
-├── requirements.txt           # Python dependencies
-└── README.md                  # This file
+│   ├── test_honeypot.py       # Unit test suite for core modules
+│   ├── integration_test.py    # Local integration testing
+│   └── attack_simulator.py    # 🚨 Local Attack Payload Generation Tool (Simulations)
+├── docker-compose.yml         # Container stack configurations
+├── .env.example               # Config template
+└── requirements.txt           # Python dependencies
 ```
 
 ---
 
 ## 🚀 Quick Start (Local Development)
 
-### Prerequisites
-- Python 3.9+ installed
-
-### 1. Setup Virtual Environment
+### 1. Prerequisites & Environment
+Ensure you have Python 3.9+ installed and running. Create a virtual environment and load requirements:
 ```powershell
-cd HoneyPOt
 python -m venv venv
-.\venv\Scripts\activate
-```
-
-### 2. Install Dependencies
-```powershell
+.\venv\Scripts\activate       # On Windows
+source venv/bin/activate      # On Linux/Mac
 pip install -r requirements.txt
 ```
 
-### 3. Run the Server
+### 2. Run the Honeypot Server
 ```powershell
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+On the first startup, the system automatically initializes an SQLite database (`honeypot.db`) and trains the synthetic ML models.
+
+### 3. Access Premium Dashboard
+Navigate to: **[http://127.0.0.1:8000/dashboard/](http://127.0.0.1:8000/dashboard/)**
+
+---
+
+## 🧪 Testing the Platform (Attack Simulator)
+
+To truly see the platform in action, you can safely blast your own honeypot instance using the built-in **Attack Simulator**. This will populate the dashboard with realistic security threats, trigger MITRE mappings, calculate anomaly scores, and initiate autoblocking functionality.
+
+Open a **separate terminal** and run the simulator script.
+
+### Using the Attack Simulator
+Run the Python simulator script located in `tests/attack_simulator.py`:
+
+```powershell
+# Run ALL attack scenarios (Recommended to fully populate dashboard)
+python tests/attack_simulator.py --scenario all
+
+# Test specific attack payloads
+python tests/attack_simulator.py --scenario sql
+python tests/attack_simulator.py --scenario xss
+python tests/attack_simulator.py --scenario rce
+python tests/attack_simulator.py --scenario brute
+python tests/attack_simulator.py --scenario scanner
+python tests/attack_simulator.py --scenario credential
+python tests/attack_simulator.py --scenario honeytoken
+python tests/attack_simulator.py --scenario traversal
+python tests/attack_simulator.py --scenario recon
 ```
 
-On first startup, the system will:
-- Create the SQLite database (`honeypot.db`) automatically
-- Train the attack classifier on synthetic data (~200 samples)
-- Train the anomaly detector if data exists
-
-### 4. Access Dashboard
-Open **[http://localhost:8000/dashboard/](http://localhost:8000/dashboard/)**
+**What the Simulator Does:**
+1. It spoofs various attacker IP addresses using the `X-Forwarded-For` header.
+2. It sends realistic exploit attempts matched to common CVEs and typical attack patterns.
+3. Once completed, your dashboard will light up with attacks under the `Attacks` tab, session replays, and visually populate the `Overview` counter animations.
 
 ---
 
 ## 🐳 Docker Deployment (Production)
 
-### 1. Copy Environment File
+### 1. Configure the `.env` settings
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Remember to adjust any WEBHOOK URLs or BLOCK Thresholds!
 ```
 
 ### 2. Start Services
 ```bash
 docker-compose up -d --build
 ```
-
-This starts:
-- **PostgreSQL 16** database with persistent storage
-- **Honeypot v2** application on port 8000
-
-### 3. Access
-- Dashboard: `http://your-server:8000/dashboard/`
-- API: `http://your-server:8000/api/admin/stats`
+This initializes a robust Docker stack containing **PostgreSQL** (persistent storage replacing SQLite in production mode) and the **Honeypot app layer**. 
 
 ---
 
-## 🧪 Testing
+## 📊 Dashboard Panes
 
-### Run Tests
-```powershell
-python tests/test_honeypot.py
-```
-
-### Simulate Attacks (curl commands)
-
-**1. Normal user (low threat)**
-```bash
-curl -X GET http://localhost:8000/api/users
-```
-
-**2. SQL Injection on fake login**
-```bash
-curl -X POST http://localhost:8000/admin-login -d "username=admin' OR 1=1 --&password=test"
-```
-
-**3. Scanner probing PHPMyAdmin**
-```bash
-curl -X GET http://localhost:8000/phpmyadmin
-```
-
-**4. Malicious scanner with XSS payload**
-```bash
-curl -H "User-Agent: sqlmap/1.5.2" -X GET "http://localhost:8000/?q=<script>alert(1)</script>"
-```
-
-**5. Environment file probe**
-```bash
-curl -X GET http://localhost:8000/.env
-```
-
-**6. Directory traversal attempt**
-```bash
-curl -X GET "http://localhost:8000/download?file=../../etc/passwd"
-```
-
-**7. RCE attempt**
-```bash
-curl -X POST http://localhost:8000/api/exec -d "cmd=; cat /etc/passwd"
-```
-
-**8. Brute force login**
-```bash
-for i in $(seq 1 5); do curl -X POST http://localhost:8000/admin-login -d "username=admin&password=pass$i"; done
-```
-
-After running these, check the dashboard to see:
-- Attack classifications in the **Attacks** tab
-- MITRE ATT&CK mappings in the **MITRE** tab
-- Session replay in the **Replay** tab
-- Honeytokens in the **Tokens** tab
-
----
-
-## 📊 Dashboard Pages
-
-| Tab | Description |
+| Dashboard Tab | Purpose |
 |-----|-------------|
-| **📊 Overview** | Stats cards, attack distribution chart, recent activity log |
-| **👁️ Sessions** | Live/historical attacker sessions with session details |
-| **🕐 Replay** | Session timeline replay showing the full attacker journey |
-| **⚔️ Attacks** | Attack classification analytics with pie chart |
-| **🗺️ MITRE** | MITRE ATT&CK technique grid with confidence bars |
-| **🚫 Blocked** | Blocked IP management with unblock controls |
-| **🍯 Tokens** | Honeytoken status — dormant vs triggered tokens |
-| **📤 Export** | Download JSON/CSV/STIX 2.1 exports + alert history |
+| **📊 Overview** | High-level widgets, attack distribution chart, SVG Threat Gauge, and scrolling activity logs. |
+| **👁️ Sessions** | Track session connections linking identical IPs and Header patterns across multiple interaction timestamps. |
+| **🕐 Replay** | An exact timeline showing every request path, payload, and chronological behavior progression of an attacker. |
+| **⚔️ Attacks** | Grouped ML classification analytics separated into the 7 primary attack dimensions. |
+| **🗺️ MITRE** | Maps observed activity to recognized MITRE ATT&CK techniques with relative confidence bars. |
+| **🚫 Blocked** | Active Block List. Threat actors exceeding 85 threat blocks are automatically suspended. Manage unblocks here. |
+| **🍯 Tokens** | Deploy and monitor decoy credentials (Keys/JWTs) implanted into exposed HTML components. |
+| **📤 Export** | Download JSON, CSV, and SOC-compatible STIX 2.1 Threat Intel files. |
 
 ---
 
-## 🔌 Optional Integrations
-
-### Cloudflare Auto-Blocking
-Set in `.env`:
-```
-CLOUDFLARE_API_TOKEN=your_token_here
-CLOUDFLARE_ZONE_ID=your_zone_id
-```
-IPs exceeding the threat threshold will be automatically blocked via Cloudflare firewall rules.
-
-### Telegram Alerts
-```
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
-```
-
-### Email Alerts
-```
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your@email.com
-SMTP_PASS=your_app_password
-ALERT_EMAIL_TO=soc-team@company.com
-```
-
-### Discord Alerts
-```
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-```
-
----
-
-## 🔒 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/stats` | Dashboard statistics |
-| GET | `/api/admin/logs` | Recent request logs |
-| GET | `/api/admin/blocked` | Blocked IPs |
-| POST | `/api/admin/block` | Block an IP |
-| POST | `/api/admin/unblock` | Unblock an IP |
-| GET | `/api/admin/sessions` | All sessions |
-| GET | `/api/admin/sessions/active` | Active sessions |
-| GET | `/api/admin/sessions/{id}/timeline` | Session replay |
-| GET | `/api/admin/fingerprints` | Attacker fingerprints |
-| GET | `/api/admin/mitre` | MITRE ATT&CK summary |
-| GET | `/api/admin/honeytokens` | Honeytoken status |
-| GET | `/api/admin/attack-types` | Attack classification stats |
-| GET | `/api/admin/export/{json\|csv\|stix}` | Export intelligence |
-| GET | `/api/admin/incident/{session_id}` | Incident report (Markdown) |
-| GET | `/api/admin/alerts` | Alert history |
-| POST | `/api/admin/retrain` | Retrain anomaly model |
-| POST | `/api/admin/retrain-classifier` | Retrain attack classifier |
-
----
-
-## ⚠️ Security Warnings
-
-1. **Payload Handling**: The honeypot intentionally accepts malicious payloads. They are sanitized before display using HTML escaping to prevent stored XSS.
-2. **Dashboard Access**: The `/dashboard` route should be protected by firewall rules in production. Only allow access from trusted IPs/VPN.
-3. **No Offensive Use**: This tool is strictly defensive — it logs, detects, and classifies. It never executes attacks.
-4. **No Real Credentials**: All tokens and keys are fake honeytokens. No real secrets are stored or exposed.
-5. **Database Security**: For production, use PostgreSQL with strong credentials. The default SQLite is for development only.
-
----
-
-## 📋 Attack Categories
-
-| Category | Detection Method |
-|----------|-----------------|
-| SQL Injection | Pattern matching (UNION, OR 1=1, etc.) + ML |
-| XSS | Script tags, event handlers, JS URIs + ML |
-| Brute Force | Repeated POST to login endpoints |
-| Directory Traversal | `../` patterns, config file probes |
-| RCE Attempt | Command chaining, backticks, eval() |
-| Bot Scanner | Known scanner user agents (sqlmap, nmap, etc.) |
-| Credential Stuffing | Automated login with leaked credential patterns |
-
----
-
-## 🗺️ MITRE ATT&CK Coverage
+## 🗺️ MITRE ATT&CK Coverage Map
 
 | Attack | Tactic | Technique |
 |--------|--------|-----------|
-| SQL Injection | Initial Access | T1190 — Exploit Public-Facing Application |
-| XSS | Initial Access | T1189 — Drive-by Compromise |
-| Brute Force | Credential Access | T1110 — Brute Force |
-| Credential Stuffing | Credential Access | T1110.004 — Credential Stuffing |
-| Directory Traversal | Discovery | T1083 — File and Directory Discovery |
-| RCE | Execution | T1059 — Command and Scripting Interpreter |
-| Bot Scanner | Reconnaissance | T1595 — Active Scanning |
-| Honeytoken Theft | Collection | T1528 — Steal Application Access Token |
+| **SQL Injection** | Initial Access | T1190 — Exploit Public-Facing Application |
+| **Cross Site Scripting** | Initial Access | T1189 — Drive-by Compromise |
+| **Brute Force** | Credential Access | T1110 — Brute Force |
+| **Credential Stuffing** | Credential Access | T1110.004 — Credential Stuffing |
+| **Directory Traversal** | Discovery | T1083 — File and Directory Discovery |
+| **Remote Code Exe** | Execution | T1059 — Command and Scripting Interpreter |
+| **Bot Scanner** | Reconnaissance | T1595 — Active Scanning |
+| **Honeytoken Theft** | Collection | T1528 — Steal Application Access Token |
 
 ---
 
-*Built as a SOC-grade defensive honeypot platform. For educational and authorized security research purposes only.*
+## 🔌 Optional Auto-Integrations
+
+Append these combinations into your `.env` to unlock extra capabilities:
+
+* **Cloudflare Threat Blocking Integration** `CLOUDFLARE_API_TOKEN` & `CLOUDFLARE_ZONE_ID`
+* **Telegram Webhooks** `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID`
+* **Email Threat Dispatching** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
+* **Discord Ping Analytics** `DISCORD_WEBHOOK_URL` 
+
+---
+
+*Built as a SOC-grade defensive honeypot platform. For educational and authorized security research purposes only. Never utilize this tool for outbound attacks.*
