@@ -1,13 +1,14 @@
 """
-Honeypot v2 — Main Application.
+HoneyLearn — Adaptive AI Honeypot.
 SOC-grade AI-powered web honeypot with deep attacker tracking,
 attack classification, session replay, MITRE mapping, honeytokens,
-threat intelligence export, auto-blocking, and alerting.
+threat intelligence export, auto-blocking, alerting, and ADAPTIVE
+ML LEARNING that improves from every real attack it receives.
 """
 import json
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Request, Response, status, Depends
+from fastapi import FastAPI, Request, Response, status, Depends, Query
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,7 @@ from .models import (
 from .config import settings
 from .ml.anomaly_detector import anomaly_detector
 from .ml.attack_classifier import attack_classifier
+from .ml.adaptive_learner import adaptive_learner
 from .blocking import block_manager
 from .fingerprint import upsert_fingerprint, generate_fingerprint_id
 from .session_tracker import (
@@ -42,7 +44,7 @@ import os
 # Create DB tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Honeypot v2 — SOC Threat Detection Platform")
+app = FastAPI(title="HoneyLearn — Adaptive AI Honeypot")
 
 app.add_middleware(
     CORSMiddleware,
@@ -75,6 +77,24 @@ def on_startup():
         except Exception as e:
             print(f"[STARTUP] Classifier training failed: {e}")
 
+    print(f"[HONEYLEARN] Adaptive Learning: {'ENABLED' if settings.AUTO_LEARN_ENABLED else 'DISABLED'}")
+    print(f"[HONEYLEARN] Retrain threshold: {settings.RETRAIN_THRESHOLD} samples")
+    print(f"[HONEYLEARN] Dashboard auth: {'ENABLED' if settings.ADMIN_SECRET_TOKEN else 'DISABLED'}")
+
+
+# ──────────────────────────────────────────────
+# AUTH HELPER — Protects Dashboard & Admin APIs
+# ──────────────────────────────────────────────
+
+def verify_admin_token(request: Request) -> bool:
+    """Check if the request has a valid admin token."""
+    token = request.query_params.get("token", "")
+    if not token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    return token == settings.ADMIN_SECRET_TOKEN
+
 
 # ──────────────────────────────────────────────
 # CORE MIDDLEWARE — The Honeypot Brain
@@ -105,9 +125,25 @@ async def honeypot_middleware(request: Request, call_next):
             status_code=status.HTTP_403_FORBIDDEN
         )
 
-    # Allow dashboard/admin requests from whitelisted IPs
     path = request.url.path
-    if client_ip in block_manager.whitelist and path.startswith(("/dashboard", "/api/admin", "/api/fingerprint")):
+
+    # ── Dashboard & Admin Auth Gate ──
+    # Allow static assets (CSS, JS, images, fonts) through without token.
+    # Only the dashboard HTML page and admin API endpoints require auth.
+    static_extensions = ('.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.map')
+    if path.startswith("/dashboard") and any(path.endswith(ext) for ext in static_extensions):
+        return await call_next(request)
+
+    # Require token for dashboard HTML and all admin API endpoints
+    if path.startswith(("/dashboard", "/api/admin")):
+        if verify_admin_token(request):
+            return await call_next(request)
+        else:
+            # Return 404 to hide that the dashboard exists
+            return Response(content="Not Found", status_code=404)
+
+    # Allow fingerprint API always
+    if path.startswith("/api/fingerprint"):
         return await call_next(request)
 
     # 2. Extract request data
@@ -226,6 +262,22 @@ async def honeypot_middleware(request: Request, call_next):
             dispatch_alert(
                 db, reason, client_ip, fp_id, threat_score, attack_type, path, session_id
             )
+
+        # 14. HoneyLearn — Feed the adaptive learning engine
+        if settings.AUTO_LEARN_ENABLED:
+            adaptive_learner.ingest_sample(
+                path=path,
+                method=method,
+                payload=payload,
+                user_agent=user_agent,
+                attack_type=attack_type,
+                confidence=attack_confidence,
+                threat_score=threat_score,
+                detected_patterns=detected_patterns,
+                ip_address=client_ip,
+            )
+            # Check if buffer has enough samples for retraining
+            adaptive_learner.check_retrain(settings.RETRAIN_THRESHOLD)
 
         db.commit()
 
@@ -618,12 +670,52 @@ def retrain_classifier():
         return {"success": False, "message": str(e)}
 
 
+# ── HoneyLearn: Adaptive Learning API ──
+
+@app.get("/api/admin/learning/stats")
+def learning_stats():
+    """Get adaptive learning statistics."""
+    return adaptive_learner.get_learning_stats()
+
+
+@app.get("/api/admin/learning/events")
+def learning_events(limit: int = 50):
+    """Get recent learning events."""
+    return adaptive_learner.get_learning_events(limit)
+
+
+@app.get("/api/admin/learning/model-history")
+def learning_model_history():
+    """Get model version history with accuracy trends."""
+    return adaptive_learner.get_model_history()
+
+
+@app.get("/api/admin/learning/patterns")
+def learning_novel_patterns(limit: int = 30):
+    """Get recently discovered novel attack patterns."""
+    return adaptive_learner.get_novel_patterns(limit)
+
+
+@app.get("/api/admin/learning/buffer")
+def learning_buffer():
+    """Get current sample buffer breakdown."""
+    return adaptive_learner.get_buffer_breakdown()
+
+
 # ──────────────────────────────────────────────
 # STATIC FILES & CATCH-ALL
 # ──────────────────────────────────────────────
 
 os.makedirs("app/static", exist_ok=True)
 app.mount("/dashboard", StaticFiles(directory="app/static", html=True), name="static")
+
+
+@app.get("/challenge")
+async def attack_challenge_gui():
+    """Public web GUI for attackers to easily launch attacks."""
+    with open("app/static/attack.html", "r", encoding="utf-8") as f:
+        html = f.read()
+    return HTMLResponse(content=html)
 
 
 @app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])

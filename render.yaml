@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: honeylearn
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ADMIN_SECRET_TOKEN
+        generateValue: true
+      - key: AUTO_LEARN_ENABLED
+        value: "true"
+      - key: RETRAIN_THRESHOLD
+        value: "50"
+      - key: THREAT_BLOCK_THRESHOLD
+        value: "85"
+      - key: WHITELIST_IPS
+        value: "127.0.0.1,localhost,::1"

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoneyLearn — Attack Challenge</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #111;
+            --primary: #ff1a1a;
+            --primary-hover: #cc0000;
+            --text: #00ff00;
+            --text-muted: #555;
+            --border: #330000;
+            --font: 'Courier New', Courier, monospace;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: var(--font);
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--surface);
+            border-radius: 4px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px var(--primary);
+        }
+
+        p { color: #aaa; margin-bottom: 1rem; font-size: 1.1rem; }
+
+        .rules {
+            background: rgba(255, 0, 0, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: left;
+            font-size: 0.95rem;
+            color: #ccc;
+        }
+
+        .attack-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .attack-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .attack-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+
+        .attack-card h3 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.25rem; text-transform: uppercase; }
+        .attack-card p { font-size: 0.9rem; margin-bottom: 1.5rem; color: #888; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            font-family: var(--font);
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn:hover { background: var(--primary); color: #000; }
+
+        .custom-cmd {
+            margin-top: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--primary);
+            padding: 1.5rem;
+        }
+
+        .custom-cmd h3 { color: var(--primary); margin-bottom: 1rem; text-transform: uppercase; }
+        .custom-input-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .custom-input-group select, .custom-input-group input {
+            background: #000; color: var(--text); border: 1px solid var(--border); padding: 0.75rem; font-family: var(--font);
+        }
+        .custom-input-group input { flex: 1; }
+        .custom-input-group input:focus { outline: none; border-color: var(--primary); }
+
+        .terminal { margin-top: 3rem; background: #000; border: 1px solid var(--border); }
+        .terminal-header { background: #111; padding: 0.5rem 1rem; font-size: 0.85rem; color: #666; border-bottom: 1px solid var(--border); text-transform: uppercase; }
+        .terminal-body { padding: 1rem; height: 300px; overflow-y: auto; font-size: 0.9rem; color: var(--text); }
+        .log-entry { margin-bottom: 0.5rem; word-break: break-all; }
+        .log-entry.error { color: var(--primary); }
+        .log-entry.info { color: #ffaa00; }
+        .log-entry.response { color: #aaa; margin-left: 20px; font-size: 0.85rem; }
+        
+        .cui-tab { margin-top: 2rem; padding: 1.5rem; background: var(--surface); border: 1px dashed var(--border); }
+        .cui-tab h2 { color: var(--primary); font-size: 1.5rem; margin-bottom: 1rem; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>[ HoneyLearn_Rootkit ]</h1>
+        <p>Target initialized. Active learning engine deployed. Awaiting payloads.</p>
+        <div class="rules">
+            <strong>[!] OPSEC RULES:</strong><br>
+            > Authorization granted for targeted attacks.<br>
+            > All payloads will be ingested by the AI neural net.<br>
+            > No DoS tools allowed. Stealth preferred.
+        </div>
+    </header>
+
+    <h2 style="margin-bottom: 1rem; font-size: 1.5rem; color: var(--primary); text-transform: uppercase;">> Weaponized Payloads</h2>
+    <div class="attack-grid">
+        <div class="attack-card">
+            <h3>[ SQLi ]</h3>
+            <p>Bypass auth via malformed queries.</p>
+            <button class="btn" onclick="fireAttack('sqli')">Execute</button>
+        </div>
+        <div class="attack-card">
+            <h3>[ XSS ]</h3>
+            <p>Inject hostile client-side scripts.</p>
+            <button class="btn" onclick="fireAttack('xss')">Execute</button>
+        </div>
+        <div class="attack-card">
+            <h3>[ RCE ]</h3>
+            <p>Remote command execution exploit.</p>
+            <button class="btn" onclick="fireAttack('rce')">Execute</button>
+        </div>
+        <div class="attack-card">
+            <h3>[ LFI/Traversal ]</h3>
+            <p>Read restricted system files.</p>
+            <button class="btn" onclick="fireAttack('traversal')">Execute</button>
+        </div>
+        <div class="attack-card">
+            <h3>[ Probing ]</h3>
+            <p>Scan for exposed configs (.env).</p>
+            <button class="btn" onclick="fireAttack('recon')">Execute</button>
+        </div>
+        <div class="attack-card">
+            <h3>[ Brute Force ]</h3>
+            <p>Saturate login endpoints.</p>
+            <button class="btn" onclick="fireAttack('brute')">Execute</button>
+        </div>
+    </div>
+
+    <div class="custom-cmd">
+        <h3>> Custom Attack Vector</h3>
+        <p>Send a custom payload to any endpoint.</p>
+        <div class="custom-input-group">
+            <select id="custom-method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+            </select>
+            <input type="text" id="custom-path" placeholder="/api/endpoint?q=payload" value="/search?q=test">
+        </div>
+        <div class="custom-input-group">
+            <input type="text" id="custom-body" placeholder="POST body (e.g. user=admin&pass=123)">
+            <button class="btn" style="width: 150px;" onclick="fireCustom()">Send</button>
+        </div>
+    </div>
+    
+    <div class="cui-tab">
+        <h2>> CUI / Terminal Mode</h2>
+        <p style="color: #888;">Copy and paste into your local terminal.</p>
+        <div style="background: #000; padding: 1rem; text-align: left; margin-top: 1rem; overflow-x: auto; font-size: 0.9rem;">
+            <p style="color: #555;"># SQLi Attack</p>
+            <p style="color: var(--primary); margin-bottom: 1.5rem; white-space: nowrap;">curl -X POST <span class="base-url"></span>/admin-login -d "username=admin&password=' OR 1=1 --"</p>
+            
+            <p style="color: #555;"># XSS Attack</p>
+            <p style="color: var(--primary); white-space: nowrap;">curl "<span class="base-url"></span>/search?q=&lt;script&gt;alert('XSS')&lt;/script&gt;"</p>
+        </div>
+    </div>
+
+    <div class="terminal">
+        <div class="terminal-header">Target Response Console [stdout]</div>
+        <div class="terminal-body" id="term">
+            <div class="log-entry info">System initialized. Awaiting commands...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.base-url').forEach(el => el.textContent = window.location.origin);
+    
+    const term = document.getElementById('term');
+    
+    function log(msg, type='normal') {
+        const div = document.createElement('div');
+        div.className = `log-entry ${type}`;
+        const time = new Date().toTimeString().split(' ')[0];
+        div.innerHTML = `<span style="color:#555;">[${time}]</span> ${msg}`;
+        term.appendChild(div);
+        term.scrollTop = term.scrollHeight;
+    }
+
+    const payloads = {
+        sqli: { path: '/admin-login', method: 'POST', body: "username=admin&password=' OR 1=1 --" },
+        xss: { path: '/search?q=\x3Cscript>alert(1)\x3C/script>', method: 'GET' },
+        rce: { path: '/api/ping', method: 'POST', body: "host=127.0.0.1; cat /etc/shadow" },
+        traversal: { path: '/assets/../../../windows/system32/drivers/etc/hosts', method: 'GET' },
+        recon: { path: '/.env', method: 'GET' },
+        brute: { path: '/admin-login', method: 'POST', body: "username=admin&password=password123" }
+    };
+
+    window.fireAttack = async function(type) {
+        const attack = payloads[type];
+        await sendRequest(attack.method, attack.path, attack.body);
+    };
+
+    window.fireCustom = async function() {
+        const method = document.getElementById('custom-method').value;
+        const path = document.getElementById('custom-path').value;
+        const body = document.getElementById('custom-body').value;
+        await sendRequest(method, path, method === 'POST' ? body : null);
+    };
+
+    async function sendRequest(method, path, body) {
+        log(`> ${method} ${path}`, 'info');
+        if (body) log(`  Payload: ${body}`, 'info');
+        
+        try {
+            const options = { method: method };
+            if (body) {
+                options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+                options.body = body;
+            }
+            
+            const res = await fetch(path, options);
+            const responseText = await res.text();
+            
+            if (res.status === 403) {
+                log(`[${res.status} FORBIDDEN] Target blocked request. Threat score threshold exceeded.`, 'error');
+            } else if (res.status === 404) {
+                log(`[${res.status} NOT FOUND] Honeypot Trap Triggered.`, 'normal');
+            } else {
+                log(`[${res.status}] Response received.`, 'normal');
+            }
+            
+            if (responseText) {
+                log(responseText.substring(0, 150) + (responseText.length > 150 ? '...' : ''), 'response');
+            }
+            
+        } catch (e) {
+            log(`[ERROR] Connection failed: ${e.message}`, 'error');
+        }
+    }
+</script>
+
+</body>
+</html>

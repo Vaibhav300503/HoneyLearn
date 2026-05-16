@@ -24,5 +24,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/api/admin/stats')" || exit 1
 
-# Run with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run with uvicorn — PORT env var for cloud platforms (Render, Railway, etc.)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1

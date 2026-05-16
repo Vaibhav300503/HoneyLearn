@@ -196,3 +196,52 @@ class BlockEvent(Base):
     blocked_at = Column(DateTime(timezone=True), server_default=func.now())
     unblocked_at = Column(DateTime(timezone=True), nullable=True)
     auto_blocked = Column(Boolean, default=True)
+
+
+# ──────────────────────────────────────────────
+# V3: HONEYLEARN ADAPTIVE LEARNING
+# ──────────────────────────────────────────────
+
+class AttackSample(Base):
+    """
+    Validated real-world attack samples collected from live traffic.
+    Used alongside synthetic data to retrain the classifier.
+    """
+    __tablename__ = "attack_samples"
+
+    id = Column(Integer, primary_key=True, index=True)
+    path = Column(String(500))
+    method = Column(String(10))
+    payload = Column(Text, nullable=True)
+    user_agent = Column(Text, nullable=True)
+    attack_type = Column(String(50), index=True)
+    confidence = Column(Float, default=0.0)
+    threat_score = Column(Float, default=0.0)
+    detected_patterns = Column(Text, nullable=True)   # JSON array
+    source_ip = Column(String(50), nullable=True)
+    collected_at = Column(DateTime(timezone=True), server_default=func.now())
+    used_in_training = Column(Boolean, default=False)
+
+
+class LearningEvent(Base):
+    """Logs each learning milestone — retrains, new patterns, accuracy changes."""
+    __tablename__ = "learning_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_type = Column(String(30))          # retrain_started / retrain_complete / new_pattern / error
+    description = Column(Text)
+    metadata_json = Column(Text, nullable=True)   # JSON details
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ModelVersion(Base):
+    """Tracks classifier model versions with accuracy metrics over time."""
+    __tablename__ = "model_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    version = Column(Integer, unique=True, index=True)
+    accuracy = Column(Float, default=0.0)
+    real_sample_count = Column(Integer, default=0)
+    total_sample_count = Column(Integer, default=0)
+    training_duration_ms = Column(Integer, nullable=True)
+    trained_at = Column(DateTime(timezone=True), server_default=func.now())

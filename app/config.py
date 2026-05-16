@@ -48,6 +48,15 @@ class Settings:
         "NGINX_DENY_FILE", "/etc/nginx/conf.d/honeypot_deny.conf"
     )
 
+    # --- HoneyLearn: Dashboard Auth ---
+    ADMIN_SECRET_TOKEN: str = os.getenv("ADMIN_SECRET_TOKEN", "honeylearn-local-dev-2026")
+
+    # --- HoneyLearn: Adaptive Learning ---
+    AUTO_LEARN_ENABLED: bool = os.getenv("AUTO_LEARN_ENABLED", "true").lower() in ("true", "1", "yes")
+    RETRAIN_THRESHOLD: int = int(os.getenv("RETRAIN_THRESHOLD", "50"))
+    RETRAIN_INTERVAL_MINUTES: int = int(os.getenv("RETRAIN_INTERVAL_MINUTES", "30"))
+    MAX_MODEL_VERSIONS: int = int(os.getenv("MAX_MODEL_VERSIONS", "10"))
+
     @property
     def cloudflare_enabled(self) -> bool:
         return bool(self.CLOUDFLARE_API_TOKEN and self.CLOUDFLARE_ZONE_ID)

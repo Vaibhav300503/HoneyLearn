@@ -213,5 +213,116 @@ def train_attack_classifier():
     return True
 
 
+def train_hybrid(real_samples: list) -> dict:
+    """
+    HoneyLearn Hybrid Training — combines synthetic training data with
+    validated real-world attack samples for incremental model improvement.
+
+    This is the core of the adaptive learning system. As the honeypot
+    receives real attacks, they are mixed with synthetic data to produce
+    a more accurate and battle-tested classifier.
+
+    Args:
+        real_samples: List of dicts with keys: path, method, payload,
+                     user_agent, attack_type, confidence
+
+    Returns:
+        dict with keys: success, accuracy, total_samples, error
+    """
+    import time as _time
+    start_time = _time.time()
+
+    try:
+        print("[HONEYLEARN TRAIN] Generating synthetic baseline data...")
+        synthetic_data = _generate_synthetic_data()
+
+        # Convert real samples to training format
+        real_data = []
+        for sample in real_samples:
+            # Only use samples with reasonable confidence
+            if sample.get("confidence", 0) < 0.4:
+                continue
+
+            text = (
+                f"PATH:{sample.get('path', '')} "
+                f"METHOD:{sample.get('method', 'GET')} "
+                f"UA:{(sample.get('user_agent', '') or '')[:200]} "
+                f"PAYLOAD:{(sample.get('payload', '') or '')[:1000]}"
+            )
+            attack_type = sample.get("attack_type", "benign")
+            real_data.append((text, attack_type))
+
+        # Weight real samples more heavily (they're ground truth from the wild)
+        # Duplicate each real sample 3x to amplify their impact on training
+        weighted_real = real_data * 3
+
+        # Combine synthetic + real data
+        combined = synthetic_data + weighted_real
+        random.shuffle(combined)
+
+        total_samples = len(combined)
+        real_count = len(real_data)
+
+        print(f"[HONEYLEARN TRAIN] Combined dataset: {len(synthetic_data)} synthetic + {real_count} real (x3 weighted) = {total_samples} total")
+
+        texts = [d[0] for d in combined]
+        labels = [d[1] for d in combined]
+
+        print(f"[HONEYLEARN TRAIN] Label distribution:")
+        for label in sorted(set(labels)):
+            count = labels.count(label)
+            print(f"  {label}: {count} samples")
+
+        # TF-IDF with character n-grams
+        vectorizer = TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(2, 5),
+            max_features=10000,
+            sublinear_tf=True
+        )
+
+        X = vectorizer.fit_transform(texts)
+
+        # Train with calibration
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, labels, test_size=0.2, random_state=42, stratify=labels
+        )
+
+        base_model = LinearSVC(max_iter=5000, random_state=42, C=1.0)
+        calibrated = CalibratedClassifierCV(base_model, cv=3)
+        calibrated.fit(X_train, y_train)
+
+        # Evaluate
+        y_pred = calibrated.predict(X_test)
+        accuracy = float(np.mean(np.array(y_pred) == np.array(y_test)))
+
+        print(f"\n[HONEYLEARN TRAIN] Hybrid Model Accuracy: {accuracy:.3f}")
+        print(classification_report(y_test, y_pred))
+
+        # Save model
+        joblib.dump({"model": calibrated, "vectorizer": vectorizer}, CLASSIFIER_PATH)
+        print(f"[HONEYLEARN TRAIN] Hybrid model saved to {CLASSIFIER_PATH}")
+
+        elapsed_ms = int((_time.time() - start_time) * 1000)
+
+        return {
+            "success": True,
+            "accuracy": accuracy,
+            "total_samples": total_samples,
+            "real_samples": real_count,
+            "synthetic_samples": len(synthetic_data),
+            "elapsed_ms": elapsed_ms,
+        }
+
+    except Exception as e:
+        print(f"[HONEYLEARN TRAIN] Hybrid training error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "accuracy": 0.0,
+            "total_samples": 0,
+        }
+
+
 if __name__ == "__main__":
     train_attack_classifier()

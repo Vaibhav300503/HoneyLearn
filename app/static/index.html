@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HoneyPot v2 — SOC Threat Detection Platform</title>
-    <meta name="description" content="AI-powered honeypot with threat detection, MITRE ATT&CK mapping, and SOC analytics">
+    <title>HoneyLearn — Adaptive AI Honeypot</title>
+    <meta name="description" content="AI-powered honeypot that learns from real attacks. MITRE ATT&CK mapping, session replay, and adaptive ML.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/dashboard/styles.css">
@@ -15,8 +15,8 @@
     <nav class="navbar" id="main-navbar">
         <div class="navbar-inner">
             <div class="navbar-brand">
-                <div class="brand-icon">🛡️</div>
-                <span class="brand-text">HoneyPot v2</span>
+                <div class="brand-icon">🧠</div>
+                <span class="brand-text">HoneyLearn</span>
             </div>
             <div class="navbar-tabs" id="nav-tabs">
                 <button class="nav-tab active" data-tab="overview" id="tab-overview">Dashboard</button>
@@ -26,6 +26,7 @@
                 <button class="nav-tab" data-tab="mitre" id="tab-mitre">MITRE</button>
                 <button class="nav-tab" data-tab="blocked" id="tab-blocked">Blocked</button>
                 <button class="nav-tab" data-tab="honeytokens" id="tab-honeytokens">Tokens</button>
+                <button class="nav-tab" data-tab="learning" id="tab-learning">🧠 Learning</button>
                 <button class="nav-tab" data-tab="export" id="tab-export">Export</button>
             </div>
             <div class="navbar-actions">
@@ -51,7 +52,7 @@
             <!-- Welcome Header -->
             <div class="welcome-header">
                 <div class="welcome-left">
-                    <h1 class="welcome-title">Welcome to <span class="highlight">HoneyPot SOC</span></h1>
+                    <h1 class="welcome-title">Welcome to <span class="highlight">HoneyLearn</span></h1>
                     <!-- Quick Stats Bar -->
                     <div class="quick-stats-bar">
                         <div class="quick-stat">
@@ -116,29 +117,27 @@
                         </div>
                     </div>
                     <div class="profile-sections">
-                        <div class="profile-section collapsible" id="section-fingerprints">
-                            <div class="section-header" onclick="toggleSection('fingerprints')">
+                        <div class="profile-section" id="section-fingerprints">
+                            <div class="section-header" style="cursor: default;">
                                 <span>Unique Fingerprints</span>
                                 <span class="section-value" id="stat-fingerprints">0</span>
-                                <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
                         </div>
-                        <div class="profile-section collapsible" id="section-tokens">
-                            <div class="section-header" onclick="toggleSection('tokens')">
+                        <div class="profile-section" id="section-tokens">
+                            <div class="section-header" style="cursor: default;">
                                 <span>Honeytokens Triggered</span>
                                 <span class="section-value" id="stat-tokens">0</span>
-                                <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
                         </div>
-                        <div class="profile-section">
-                            <div class="section-header">
+                        <div class="profile-section collapsible" id="section-topips">
+                            <div class="section-header" onclick="toggleSection('topips')">
                                 <span>Top Attacker IPs</span>
                                 <svg class="chevron up" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
                             <div class="section-content" id="top-ips-container"></div>
                         </div>
-                        <div class="profile-section">
-                            <div class="section-header">
+                        <div class="profile-section collapsible" id="section-targets">
+                            <div class="section-header" onclick="toggleSection('targets')">
                                 <span>Top Targeted Paths</span>
                                 <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
@@ -380,11 +379,83 @@
             </div>
         </section>
 
+        <!-- ═══ TAB: LEARNING ═══ -->
+        <section class="page-section" id="page-learning">
+            <div class="section-top-bar">
+                <h2 class="section-title">🧠 Adaptive Learning Engine</h2>
+                <div class="section-actions">
+                    <div class="learning-status-pill" id="learning-status">
+                        <span class="learning-pulse"></span>
+                        <span>Learning Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learning Stats Cards -->
+            <div class="learning-stats-grid">
+                <div class="card learning-stat-card">
+                    <div class="learning-stat-icon">📊</div>
+                    <div class="learning-stat-number" id="learn-samples">0</div>
+                    <div class="learning-stat-label">Samples Ingested</div>
+                </div>
+                <div class="card learning-stat-card">
+                    <div class="learning-stat-icon">🔄</div>
+                    <div class="learning-stat-number" id="learn-retrains">0</div>
+                    <div class="learning-stat-label">Retrains Completed</div>
+                </div>
+                <div class="card learning-stat-card">
+                    <div class="learning-stat-icon">🎯</div>
+                    <div class="learning-stat-number" id="learn-version">v0</div>
+                    <div class="learning-stat-label">Model Version</div>
+                </div>
+                <div class="card learning-stat-card">
+                    <div class="learning-stat-icon">🔍</div>
+                    <div class="learning-stat-number" id="learn-patterns">0</div>
+                    <div class="learning-stat-label">Novel Patterns</div>
+                </div>
+                <div class="card learning-stat-card">
+                    <div class="learning-stat-icon">📦</div>
+                    <div class="learning-stat-number" id="learn-buffer">0</div>
+                    <div class="learning-stat-label">Buffer Queue</div>
+                </div>
+            </div>
+
+            <div class="two-col-grid">
+                <!-- Accuracy Chart -->
+                <div class="card">
+                    <div class="card-header"><h3>Model Accuracy Over Time</h3></div>
+                    <div class="chart-container" style="height:280px;">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                    <p style="font-size:0.72rem;color:var(--text-muted);padding:8px 16px 0;">Accuracy improves as the model learns from real-world attacks</p>
+                </div>
+
+                <!-- Learning Events Feed -->
+                <div class="card card-dark">
+                    <div class="card-header-dark"><h3>📝 Learning Events</h3></div>
+                    <div class="learning-events-feed" id="learning-events-feed">
+                        <p style="color:var(--text-on-dark-muted);font-size:0.78rem;text-align:center;padding:24px;">Waiting for learning events...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Novel Patterns -->
+            <div class="card card-full-width" style="margin-top:24px;">
+                <div class="card-header"><h3>🔍 Novel Attack Patterns Discovered</h3></div>
+                <div class="activity-table-wrapper">
+                    <table class="activity-table">
+                        <thead><tr><th>Pattern</th><th>Attack Type</th><th>Discovered</th><th>Source IP</th></tr></thead>
+                        <tbody id="novel-patterns-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Footer -->
     <footer class="main-footer">
-        Honeypot v2 SOC Platform &copy; 2026 &mdash; Do not expose this dashboard to the public internet.
+        HoneyLearn — Adaptive AI Honeypot &copy; 2026 &mdash; The AI that learns from YOUR attacks.
     </footer>
 
     <script src="/dashboard/app.js"></script>

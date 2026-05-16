@@ -1,194 +1,214 @@
-# 🛡️ Honeypot v2 — SOC-Grade AI Threat Detection Platform
+# 🧠 HoneyLearn — The AI Honeypot That Learns From YOUR Attacks
 
-A production-grade, AI-powered web honeypot platform that tracks attacker sessions deeply, classifies attacks automatically, generates threat intelligence, maps to MITRE ATT&CK, and provides real-time SOC analytics.
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=for-the-badge&logo=fastapi)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange?style=for-the-badge&logo=scikit-learn)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-LIVE-brightgreen?style=for-the-badge)
+
+**An adaptive, AI-powered honeypot that gets smarter with every attack it receives.**
+
+[🎯 Attack It Now](#-try-to-hack-me) · [🧠 How It Learns](#-how-honeylearn-learns) · [📖 Setup Guide](#-quick-start) · [📊 Features](#-features)
+
+</div>
+
+---
+
+## 💡 What is HoneyLearn?
+
+Most honeypots are **static** — they detect known attacks using fixed rules. HoneyLearn is different.
+
+**HoneyLearn is an adaptive honeypot that learns from every real attack it receives.** It starts with a synthetic-trained ML classifier, but as real attackers probe it, the AI ingests their payloads, discovers new attack patterns, and periodically retrains itself to become a better detector.
+
+```
+Real Attack → AI Classifies → Buffer Samples → Auto-Retrain → Smarter AI
+     ↑                                                              ↓
+     └──────────────── Better Detection Next Time ←─────────────────┘
+```
+
+## 🎯 Try to Hack Me!
+
+**I'm inviting my network to attack this honeypot.** The more creative your attacks, the smarter the AI becomes.
+
+> 📡 **Live Target:** `https://honeylearn.onrender.com`  
+> 📖 **Attack Guide:** See [CONTRIBUTING.md](CONTRIBUTING.md) for copy-paste curl commands
+
+**What to try:**
+- 💉 SQL Injection (`' OR 1=1 --`)
+- ⚡ Cross-Site Scripting (`<script>alert(1)</script>`)
+- 💀 Remote Code Execution (`; cat /etc/passwd`)
+- 🔨 Brute Force (try common passwords on `/admin-login`)
+- 📁 Directory Traversal (`../../etc/passwd`)
+- 🤖 Bot Scanning (use scanner user-agents)
+- 🔑 Credential Stuffing (try leaked-looking credentials)
+
+Every attack you send is **classified**, **fingerprinted**, and **fed into the learning pipeline**.
+
+---
+
+## 🧠 How HoneyLearn Learns
+
+### The Adaptive Learning Loop
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                   HONEYLEARN PIPELINE                     │
+│                                                           │
+│  Request → IP Check → Fingerprint → Session Track         │
+│                                          ↓                │
+│                              AI Classify + Anomaly Score   │
+│                                          ↓                │
+│                              MITRE Map → Alert → Block     │
+│                                          ↓                │
+│                     ┌─── Ingest Sample ───┐               │
+│                     │   Learning Buffer   │               │
+│                     │  (real attack data)  │               │
+│                     └────────┬────────────┘               │
+│                              ↓                            │
+│                    Buffer Full (50+ samples)?             │
+│                         YES ↓                             │
+│                  ┌── Hybrid Retrain ──┐                   │
+│                  │ Synthetic + Real   │                   │
+│                  │ → New Model vN+1   │                   │
+│                  └───────┬────────────┘                   │
+│                          ↓                                │
+│                  Classifier Reloaded!                      │
+│                  Accuracy Tracked ↗                        │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Sample Ingestion** | Every classified request is buffered as a real-world training sample |
+| **Hybrid Training** | Retraining mixes synthetic data + real attacks (3x weighted) for robust models |
+| **Model Versioning** | Each retrain produces a new model version with tracked accuracy |
+| **Pattern Discovery** | Novel attack signatures are detected and logged in real-time |
+| **Learning Dashboard** | 🧠 tab shows accuracy trends, retrain events, and discovered patterns |
+
+---
 
 ## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
-| **Premium Warm Dashboard** | A highly aesthetic, card-based dashboard with a warm cream/amber palette, smooth micro-animations, and dynamic SVG gauges. Pure HTML/CSS/JS (no heavy frontend frameworks). |
-| **Comprehensive Attack Simulator** | A built-in Python script (`tests/attack_simulator.py`) to safely fire realistic payloads (SQLi, XSS, RCE, Brute Force, Scanners, etc.) at your local instance to verify detection and UI updates. |
-| **Attacker Fingerprinting** | Unique ID per visitor using IP + UA + header patterns + optional browser fingerprinting. |
-| **AI Attack Classification** | Uses `scikit-learn` (TF-IDF + LinearSVC/Isolation Forest) to classify incoming traffic into 7 exact attack categories with statistical confidence scores. |
-| **Session Replay Timeline** | Ordered attacker journey tracking with timestamps, payloads, and time deltas. |
-| **MITRE ATT&CK Mapping** | Auto-maps detected attacks to MITRE techniques (T1190, T1110, T1059, etc.). |
-| **Honeytokens (Decoys)** | Fake API keys, JWTs, AWS keys embedded in trap HTML pages — actively triggers HIGH RISK alerts upon reuse. |
-| **Threat Intelligence Export** | JSON, CSV, and STIX 2.1 data export formatting for SOC incident response systems. |
-| **Multi-Tier Auto Blocking** | Local database blocks + Cloudflare API + Nginx deny rules auto-generation. |
-| **Real-time Alerting** | Integrations for Telegram, Email (SMTP), and Discord webhooks. |
-| **Incident Reports** | Markdown incident reports with full attacker analysis generated per session. |
+| **🧠 Adaptive ML** | Learns from real attacks — classifier improves over time |
+| **🎯 7 Attack Categories** | SQLi, XSS, RCE, Brute Force, Dir Traversal, Bot Scanner, Credential Stuffing |
+| **👤 Attacker Fingerprinting** | Unique ID per visitor (IP + UA + header hash) |
+| **🕐 Session Replay** | Full attacker journey with timestamps and payloads |
+| **🗺️ MITRE ATT&CK** | Auto-maps to MITRE techniques (T1190, T1110, T1059, etc.) |
+| **🍯 Honeytokens** | Fake API keys/JWTs that trigger alerts when reused |
+| **🚫 Auto-Blocking** | IPs exceeding threat threshold are auto-blocked |
+| **📤 Threat Intel Export** | JSON, CSV, STIX 2.1 formats |
+| **🔔 Alerting** | Telegram, Email, Discord integrations |
+| **📊 SOC Dashboard** | Premium warm-palette dashboard (hidden, token-protected) |
 
-## 🏗️ Architecture Flow
+---
 
-```text
-Request → [IP Check] → [Fingerprint] → [Session Track] → [Honeytoken Check]
-                                                               ↓
-                                              [AI Anomaly Score + Attack Classify]
-                                                               ↓
-                                              [MITRE Map] → [Alert?] → [Block?]
-                                                               ↓
-                                                          [Log to DB]
+## 🚀 Quick Start
+
+### Local Development
+
+```bash
+# Clone the repo
+git clone https://github.com/vaibhav300503/HoneyLearn.git
+cd HoneyLearn
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate    # Linux/Mac
+.\venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the honeypot
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+
+On first startup, the AI models auto-train on synthetic data.
+
+### Access Dashboard (Token-Protected)
+
+```
+http://127.0.0.1:8000/dashboard/?token=honeylearn-local-dev-2026
+```
+
+### Test with Attack Simulator
+
+```bash
+python tests/attack_simulator.py --scenario all
+```
+
+---
+
+## 🌐 Deploy to Render (Free)
+
+1. Fork this repo
+2. Go to [render.com](https://render.com) → Sign up with GitHub
+3. New → **Web Service** → Connect your fork
+4. Settings:
+   - **Build:** `pip install -r requirements.txt`
+   - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Add env var: `ADMIN_SECRET_TOKEN` = (your secret)
+6. Deploy!
+
+Your dashboard: `https://your-app.onrender.com/dashboard/?token=YOUR_SECRET`
+
+---
 
 ## 📂 Project Structure
 
-```text
-HoneyPOt/
+```
+HoneyLearn/
 ├── app/
-│   ├── main.py                # FastAPI app with request-parsing middleware
-│   ├── config.py              # Centralized environment configuration
-│   ├── database.py            # SQLAlchemy engine + SQLite/Postgres session
-│   ├── models.py              # 9 database tables (logs, fingerprints, sessions, etc.)
-│   ├── fingerprint.py         # Attacker fingerprint engine
-│   ├── session_tracker.py     # Session replay timeline builder
-│   ├── honeytokens.py         # Honeytoken decoy generation
-│   ├── mitre.py               # MITRE ATT&CK mapping engine
-│   ├── sanitizer.py           # Payload sanitization and XSS escape utilities
-│   ├── blocking.py            # IP block manager (Local + Next-gen Firewalls)
-│   ├── cloudflare_blocker.py  # Cloudflare integration for hard WAF blocking
-│   ├── nginx_blocker.py       # Nginx deny rules generator
-│   ├── alerting.py            # Telemetry/alert dispatcher (Discord, Email, TG)
-│   ├── incident_report.py     # Markdown incident report generator
-│   ├── export.py              # STIX 2.1 / JSON / CSV Exports
+│   ├── main.py                 # FastAPI app with auth + learning pipeline
+│   ├── config.py               # Environment configuration
+│   ├── database.py             # SQLAlchemy engine
+│   ├── models.py               # 12 DB tables (incl. learning tables)
 │   ├── ml/
-│   │   ├── anomaly_detector.py    # IsolationForest threat scoring module
-│   │   ├── train.py               # Anomaly model continuous training
-│   │   ├── attack_classifier.py   # TF-IDF + LinearSVC ML classifier
-│   │   ├── classifier_train.py    # Retraining scripts over synthetic datasets
-│   │   └── feature_extractor.py   # Token extraction heuristics
+│   │   ├── adaptive_learner.py # 🧠 Adaptive Learning Engine (NEW)
+│   │   ├── attack_classifier.py# TF-IDF + LinearSVC classifier
+│   │   ├── classifier_train.py # Synthetic + hybrid training
+│   │   ├── anomaly_detector.py # IsolationForest scoring
+│   │   └── feature_extractor.py# Pattern detection heuristics
 │   └── static/
-│       ├── index.html         # Aesthetically premium 8-tab SPA dashboard
-│       ├── styles.css         # Warm card-based UI Design System (No Tailwind)
-│       ├── app.js             # Client logic (animations, charts, API fetches)
-│       └── fingerprint.js     # Browser-level fingerprinting JS logic
+│       ├── index.html          # 9-tab SPA dashboard (incl. Learning tab)
+│       ├── styles.css           # Warm premium design system
+│       └── app.js              # Dashboard logic + learning UI
 ├── tests/
-│   ├── test_honeypot.py       # Unit test suite for core modules
-│   ├── integration_test.py    # Local integration testing
-│   └── attack_simulator.py    # 🚨 Local Attack Payload Generation Tool (Simulations)
-├── docker-compose.yml         # Container stack configurations
-├── .env.example               # Config template
-└── requirements.txt           # Python dependencies
+│   └── attack_simulator.py     # Built-in attack simulation tool
+├── render.yaml                 # Render deployment blueprint
+├── CONTRIBUTING.md             # 🎯 Attack guide for challengers
+└── SECURITY.md                 # Security policy
 ```
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## 🗺️ MITRE ATT&CK Coverage
 
-### 1. Prerequisites & Environment
-Ensure you have Python 3.9+ installed and running. Create a virtual environment and load requirements:
-```powershell
-python -m venv venv
-.\venv\Scripts\activate       # On Windows
-source venv/bin/activate      # On Linux/Mac
-pip install -r requirements.txt
-```
-
-### 2. Run the Honeypot Server
-```powershell
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-On the first startup, the system automatically initializes an SQLite database (`honeypot.db`) and trains the synthetic ML models.
-
-### 3. Access Premium Dashboard
-Navigate to: **[http://127.0.0.1:8000/dashboard/](http://127.0.0.1:8000/dashboard/)**
+| Attack | Technique |
+|--------|-----------|
+| SQL Injection | T1190 — Exploit Public-Facing Application |
+| XSS | T1189 — Drive-by Compromise |
+| Brute Force | T1110 — Brute Force |
+| Credential Stuffing | T1110.004 — Credential Stuffing |
+| Directory Traversal | T1083 — File and Directory Discovery |
+| RCE | T1059 — Command and Scripting Interpreter |
+| Bot Scanner | T1595 — Active Scanning |
+| Honeytoken Theft | T1528 — Steal Application Access Token |
 
 ---
 
-## 🧪 Testing the Platform (Attack Simulator)
+## ⚖️ License
 
-To truly see the platform in action, you can safely blast your own honeypot instance using the built-in **Attack Simulator**. This will populate the dashboard with realistic security threats, trigger MITRE mappings, calculate anomaly scores, and initiate autoblocking functionality.
-
-Open a **separate terminal** and run the simulator script.
-
-### Using the Attack Simulator
-Run the Python simulator script located in `tests/attack_simulator.py`:
-
-```powershell
-# Run ALL attack scenarios (Recommended to fully populate dashboard)
-python tests/attack_simulator.py --scenario all
-
-# Test specific attack payloads
-python tests/attack_simulator.py --scenario sql
-python tests/attack_simulator.py --scenario xss
-python tests/attack_simulator.py --scenario rce
-python tests/attack_simulator.py --scenario brute
-python tests/attack_simulator.py --scenario scanner
-python tests/attack_simulator.py --scenario credential
-python tests/attack_simulator.py --scenario honeytoken
-python tests/attack_simulator.py --scenario traversal
-python tests/attack_simulator.py --scenario recon
-```
-
-**What the Simulator Does:**
-1. It spoofs various attacker IP addresses using the `X-Forwarded-For` header.
-2. It sends realistic exploit attempts matched to common CVEs and typical attack patterns.
-3. Once completed, your dashboard will light up with attacks under the `Attacks` tab, session replays, and visually populate the `Overview` counter animations.
+MIT License — see [LICENSE](LICENSE)
 
 ---
 
-## 🐳 Docker Deployment (Production)
-
-### 1. Configure the `.env` settings
-```bash
-cp .env.example .env
-# Remember to adjust any WEBHOOK URLs or BLOCK Thresholds!
-```
-
-### 2. Start Services
-```bash
-docker-compose up -d --build
-```
-This initializes a robust Docker stack containing **PostgreSQL** (persistent storage replacing SQLite in production mode) and the **Honeypot app layer**. 
-
----
-
-## 📊 Dashboard Panes
-
-| Dashboard Tab | Purpose |
-|-----|-------------|
-| **📊 Overview** | High-level widgets, attack distribution chart, SVG Threat Gauge, and scrolling activity logs. |
-| **👁️ Sessions** | Track session connections linking identical IPs and Header patterns across multiple interaction timestamps. |
-| **🕐 Replay** | An exact timeline showing every request path, payload, and chronological behavior progression of an attacker. |
-| **⚔️ Attacks** | Grouped ML classification analytics separated into the 7 primary attack dimensions. |
-| **🗺️ MITRE** | Maps observed activity to recognized MITRE ATT&CK techniques with relative confidence bars. |
-| **🚫 Blocked** | Active Block List. Threat actors exceeding 85 threat blocks are automatically suspended. Manage unblocks here. |
-| **🍯 Tokens** | Deploy and monitor decoy credentials (Keys/JWTs) implanted into exposed HTML components. |
-| **📤 Export** | Download JSON, CSV, and SOC-compatible STIX 2.1 Threat Intel files. |
-
-
-<img width="1920" height="1030" alt="1" src="https://github.com/user-attachments/assets/a40c3f91-1568-4b03-b0b0-66ef1965fbbd" />
-<img width="1920" height="1030" alt="2" src="https://github.com/user-attachments/assets/8729a407-f805-45a9-a363-15c348153e1b" />
-<img width="1920" height="1030" alt="3" src="https://github.com/user-attachments/assets/b8b5c1b9-4a7c-4141-826e-d933cf336fe9" />
-<img width="1920" height="1030" alt="4" src="https://github.com/user-attachments/assets/95fe334e-d30f-4e5b-a571-9b296bc58158" />
-<img width="1920" height="1030" alt="5" src="https://github.com/user-attachments/assets/b4cc346c-229b-4516-a2b4-125ac6435f73" />
-<img width="1920" height="1030" alt="6" src="https://github.com/user-attachments/assets/00f5d744-dbfb-46f9-a176-e59cf4548b18" />
-
----
-
-## 🗺️ MITRE ATT&CK Coverage Map
-
-| Attack | Tactic | Technique |
-|--------|--------|-----------|
-| **SQL Injection** | Initial Access | T1190 — Exploit Public-Facing Application |
-| **Cross Site Scripting** | Initial Access | T1189 — Drive-by Compromise |
-| **Brute Force** | Credential Access | T1110 — Brute Force |
-| **Credential Stuffing** | Credential Access | T1110.004 — Credential Stuffing |
-| **Directory Traversal** | Discovery | T1083 — File and Directory Discovery |
-| **Remote Code Exe** | Execution | T1059 — Command and Scripting Interpreter |
-| **Bot Scanner** | Reconnaissance | T1595 — Active Scanning |
-| **Honeytoken Theft** | Collection | T1528 — Steal Application Access Token |
-
----
-
-## 🔌 Optional Auto-Integrations
-
-Append these combinations into your `.env` to unlock extra capabilities:
-
-* **Cloudflare Threat Blocking Integration** `CLOUDFLARE_API_TOKEN` & `CLOUDFLARE_ZONE_ID`
-* **Telegram Webhooks** `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID`
-* **Email Threat Dispatching** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
-* **Discord Ping Analytics** `DISCORD_WEBHOOK_URL` 
-
----
-
-*Built as a SOC-grade defensive honeypot platform. For educational and authorized security research purposes only. Never utilize this tool for outbound attacks.*
+<div align="center">
+<strong>Built by <a href="https://github.com/vaibhav300503">Vaibhav</a> | 🧠 The AI that learns from YOUR attacks</strong>
+</div>

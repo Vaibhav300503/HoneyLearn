@@ -11,6 +11,16 @@
 let currentTab = 'overview';
 let chartInstances = {};
 
+// Extract admin token from URL ?token=xxx
+const urlParams = new URLSearchParams(window.location.search);
+const ADMIN_TOKEN = urlParams.get('token') || '';
+
+// Token-aware fetch wrapper — all admin API calls include the token
+function apiFetch(url, options = {}) {
+    const separator = url.includes('?') ? '&' : '?';
+    return fetch(`${url}${separator}token=${ADMIN_TOKEN}`, options);
+}
+
 document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => {
         const tabName = tab.dataset.tab;
@@ -41,6 +51,7 @@ function loadTabData(tab) {
         case 'mitre': loadMitre(); break;
         case 'blocked': fetchBlocked(); break;
         case 'honeytokens': loadHoneytokens(); break;
+        case 'learning': loadLearning(); break;
         case 'export': loadAlerts(); break;
     }
 }
@@ -159,7 +170,7 @@ function toggleSection(name) {
 
 async function fetchStats() {
     try {
-        const res = await fetch('/api/admin/stats');
+        const res = await apiFetch('/api/admin/stats');
         const d = await res.json();
 
         // Counter numbers with animation
@@ -352,7 +363,7 @@ function renderAttackChart(data) {
 
 async function fetchLogs() {
     try {
-        const res = await fetch('/api/admin/logs?limit=30');
+        const res = await apiFetch('/api/admin/logs?limit=30');
         const logs = await res.json();
         const tbody = document.getElementById('logs-body');
         tbody.innerHTML = '';
@@ -418,7 +429,7 @@ function populateThreatList(logs) {
 async function loadSessions(mode) {
     try {
         const url = mode === 'active' ? '/api/admin/sessions/active' : '/api/admin/sessions?limit=50';
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         const sessions = await res.json();
         const tbody = document.getElementById('sessions-body');
         tbody.innerHTML = '';
@@ -462,7 +473,7 @@ async function loadSessions(mode) {
 
 async function loadSessionList() {
     try {
-        const res = await fetch('/api/admin/sessions?limit=50');
+        const res = await apiFetch('/api/admin/sessions?limit=50');
         const sessions = await res.json();
         const select = document.getElementById('replay-session-select');
         select.innerHTML = '<option value="">Select a session...</option>';
@@ -479,7 +490,7 @@ async function loadReplay(sessionId) {
     container.innerHTML = '<p class="empty-state">Loading timeline...</p>';
 
     try {
-        const res = await fetch(`/api/admin/sessions/${sessionId}/timeline`);
+        const res = await apiFetch(`/api/admin/sessions/${sessionId}/timeline`);
         const events = await res.json();
 
         if (!events.length) {
@@ -544,7 +555,7 @@ function viewReplay(sessionId) {
 
 async function loadAttackTypes() {
     try {
-        const res = await fetch('/api/admin/attack-types');
+        const res = await apiFetch('/api/admin/attack-types');
         const data = await res.json();
         const tbody = document.getElementById('attack-types-body');
         tbody.innerHTML = '';
@@ -618,7 +629,7 @@ function renderAttackPie(data) {
 
 async function loadMitre() {
     try {
-        const res = await fetch('/api/admin/mitre');
+        const res = await apiFetch('/api/admin/mitre');
         const data = await res.json();
         const container = document.getElementById('mitre-container');
         container.innerHTML = '';
@@ -655,7 +666,7 @@ async function loadMitre() {
 
 async function fetchBlocked() {
     try {
-        const res = await fetch('/api/admin/blocked');
+        const res = await apiFetch('/api/admin/blocked');
         const blocked = await res.json();
         const tbody = document.getElementById('blocked-body');
         tbody.innerHTML = '';
@@ -686,7 +697,7 @@ async function fetchBlocked() {
 
 async function loadHoneytokens() {
     try {
-        const res = await fetch('/api/admin/honeytokens');
+        const res = await apiFetch('/api/admin/honeytokens');
         const tokens = await res.json();
         const tbody = document.getElementById('honeytokens-body');
         tbody.innerHTML = '';
@@ -723,7 +734,7 @@ function downloadExport(format) {
 
 async function loadAlerts() {
     try {
-        const res = await fetch('/api/admin/alerts?limit=20');
+        const res = await apiFetch('/api/admin/alerts?limit=20');
         const alerts = await res.json();
         const tbody = document.getElementById('alerts-body');
         tbody.innerHTML = '';
@@ -764,7 +775,7 @@ function viewIncident(sessionId) {
 
 async function blockIP(ip) {
     if (!confirm(`Block IP: ${ip}?`)) return;
-    await fetch('/api/admin/block', {
+    await apiFetch('/api/admin/block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ip })
@@ -774,7 +785,7 @@ async function blockIP(ip) {
 
 async function unblockIP(ip) {
     if (!confirm(`Unblock IP: ${ip}?`)) return;
-    await fetch('/api/admin/unblock', {
+    await apiFetch('/api/admin/unblock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ip })
@@ -786,8 +797,8 @@ async function retrainModel() {
     if (!confirm('Retrain both AI models? This may take a moment.')) return;
     try {
         const [r1, r2] = await Promise.all([
-            fetch('/api/admin/retrain', { method: 'POST' }),
-            fetch('/api/admin/retrain-classifier', { method: 'POST' })
+            apiFetch('/api/admin/retrain', { method: 'POST' }),
+            apiFetch('/api/admin/retrain-classifier', { method: 'POST' })
         ]);
         const d1 = await r1.json();
         const d2 = await r2.json();
@@ -811,3 +822,160 @@ refreshData();
 
 // Auto-refresh every 5 seconds
 setInterval(refreshData, 5000);
+
+
+// ═══════════════════════════════════════════════
+// LEARNING TAB
+// ═══════════════════════════════════════════════
+
+async function loadLearning() {
+    try {
+        const [statsRes, eventsRes, patternsRes] = await Promise.all([
+            apiFetch('/api/admin/learning/stats'),
+            apiFetch('/api/admin/learning/events?limit=20'),
+            apiFetch('/api/admin/learning/patterns?limit=20'),
+        ]);
+        const stats = await statsRes.json();
+        const events = await eventsRes.json();
+        const patterns = await patternsRes.json();
+
+        // Update stat cards
+        document.getElementById('learn-samples').textContent = stats.total_samples_ingested || 0;
+        document.getElementById('learn-retrains').textContent = stats.total_retrains || 0;
+        document.getElementById('learn-version').textContent = `v${stats.current_model_version || 0}`;
+        document.getElementById('learn-patterns').textContent = stats.novel_patterns_count || 0;
+        document.getElementById('learn-buffer').textContent = stats.buffer_size || 0;
+
+        // Training status
+        const statusPill = document.getElementById('learning-status');
+        if (stats.is_training) {
+            statusPill.innerHTML = '<span class="learning-pulse training"></span><span>Training...</span>';
+        } else {
+            statusPill.innerHTML = '<span class="learning-pulse"></span><span>Learning Active</span>';
+        }
+
+        // Accuracy chart
+        renderAccuracyChart(stats.accuracy_history || []);
+
+        // Events feed
+        renderLearningEvents(events);
+
+        // Novel patterns table
+        renderNovelPatterns(patterns);
+
+    } catch (e) { console.error('Learning tab error:', e); }
+}
+
+function renderAccuracyChart(history) {
+    const ctx = document.getElementById('accuracyChart');
+    if (!ctx) return;
+    if (chartInstances.accuracy) chartInstances.accuracy.destroy();
+
+    if (!history.length) {
+        ctx.parentElement.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:60px 16px;font-size:0.82rem;">No retraining events yet. Send attacks to build training data!</p>';
+        return;
+    }
+
+    chartInstances.accuracy = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: history.map(h => `v${h.version}`),
+            datasets: [{
+                label: 'Accuracy',
+                data: history.map(h => (h.accuracy * 100).toFixed(1)),
+                borderColor: '#d4a843',
+                backgroundColor: 'rgba(212,168,67,0.15)',
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointBackgroundColor: '#d4a843',
+                fill: true,
+                tension: 0.3,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: '#2a2a2a', titleColor: '#f0ece6', bodyColor: '#a09890', cornerRadius: 10, padding: 12 }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#9e9690' }, border: { display: false } },
+                y: { min: 50, max: 100, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#9e9690', callback: v => v + '%' }, border: { display: false } }
+            }
+        }
+    });
+}
+
+function renderLearningEvents(events) {
+    const feed = document.getElementById('learning-events-feed');
+    if (!feed) return;
+
+    if (!events.length) {
+        feed.innerHTML = '<p style="color:var(--text-on-dark-muted);font-size:0.78rem;text-align:center;padding:24px;">Waiting for learning events... Send attacks to trigger learning!</p>';
+        return;
+    }
+
+    const icons = { new_pattern: '🔍', retrain_started: '⏳', retrain_complete: '✅', retrain_failed: '❌', retrain_error: '⚠️' };
+
+    feed.innerHTML = events.map(e => `
+        <div class="learning-event-item">
+            <span class="learning-event-icon">${icons[e.type] || '📌'}</span>
+            <div class="learning-event-content">
+                <div class="learning-event-text">${escapeHTML(e.description)}</div>
+                <div class="learning-event-time">${formatTime(e.timestamp)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderNovelPatterns(patterns) {
+    const tbody = document.getElementById('novel-patterns-body');
+    if (!tbody) return;
+
+    if (!patterns.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No novel patterns discovered yet. The AI will detect new patterns as attacks arrive.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = patterns.map(p => `
+        <tr>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-dark);">${escapeHTML(p.pattern)}</td>
+            <td>${attackBadge(p.attack_type)}</td>
+            <td style="font-size:0.75rem;color:var(--text-muted);">${formatTime(p.discovered_at)}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${escapeHTML(p.source_ip || '-')}</td>
+        </tr>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════
+
+function toggleSection(sectionId) {
+    const section = document.getElementById(`section-${sectionId}`);
+    if (!section) return;
+    
+    // Some sections don't have a content div (like fingerprints), just toggle the class for styling
+    // If there is a content div, toggle the collapsed class on it
+    const content = section.querySelector('.section-content');
+    const chevron = section.querySelector('.chevron');
+    
+    if (content) {
+        content.classList.toggle('collapsed');
+        if (content.classList.contains('collapsed')) {
+            chevron.classList.remove('up');
+        } else {
+            chevron.classList.add('up');
+        }
+    } else {
+        // Just visual toggle for sections without content
+        if (chevron) {
+            if (chevron.classList.contains('up')) {
+                chevron.classList.remove('up');
+            } else {
+                chevron.classList.add('up');
+            }
+        }
+    }
+}
